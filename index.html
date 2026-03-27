@@ -601,14 +601,48 @@ function renderAgentEditForm(agent, container) {
 }
 
 function agentShowReview() {
-  // collect current selections from DOM
   const container = document.getElementById('agentContent');
   const draft = {};
+  let missingNote = [];
+
   DAYS.forEach(day => {
     const sel  = document.getElementById('csel-'+day);
-    const tinp = document.querySelector(`#tcell-${day} input`);
-    draft[day] = { type: sel ? sel.value : 'none', time: tinp ? tinp.value : '' };
+    const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
+    const ninp = document.getElementById('note-'+day);
+    const type = sel ? sel.value : 'none';
+    const note = ninp ? ninp.value.trim() : (agentDraft[day]?.note||'');
+    draft[day] = { type, time: tinp ? tinp.value : '', note };
+    // בדוק הערה חובה
+    if ((type==='off'||type==='late'||type==='early') && !note) {
+      missingNote.push(day);
+    }
   });
+
+  // הצג שגיאה אם חסרות הערות
+  if (missingNote.length > 0) {
+    // הדגש את שדות ההערה החסרים
+    missingNote.forEach(day => {
+      const ninp = document.getElementById('note-'+day);
+      if (ninp) {
+        ninp.style.borderColor = 'var(--danger)';
+        ninp.style.boxShadow = '0 0 0 2px rgba(255,123,114,.3)';
+        ninp.placeholder = '⚠️ הערה חובה!';
+        ninp.focus();
+      }
+    });
+    // הצג הודעת שגיאה
+    const existing = document.getElementById('noteError');
+    if (!existing) {
+      const errDiv = document.createElement('div');
+      errDiv.id = 'noteError';
+      errDiv.style.cssText = 'background:rgba(255,123,114,.12);border:1px solid rgba(255,123,114,.4);border-radius:8px;padding:10px 14px;color:var(--danger);font-size:.85rem;margin-top:12px;text-align:center';
+      errDiv.textContent = `⚠️ יש להוסיף הערה לאילוצים: ${missingNote.map(d=>'יום '+d).join(', ')}`;
+      const table = document.querySelector('.week-table');
+      if (table) table.parentNode.insertBefore(errDiv, table.nextSibling);
+    }
+    return;
+  }
+
   agentDraft = draft;
 
   const typeColor = {none:'var(--muted)', off:'var(--green)', late:'var(--warn)', early:'var(--accent2)'};
@@ -1169,7 +1203,7 @@ function buildAgentCard(agent) {
           <span style="font-size:.8rem;${typeStyle[c.type]||''};flex:1">${o.e} ${o.l}${t}</span>
           ${shiftToggle}
         </div>
-        ${c.note ? `<div style="font-size:.72rem;color:var(--muted);padding:1px 0 2px 4px;font-style:italic">💬 ${c.note}</div>` : ''}`;
+        ${c.note ? `<div style="font-size:.78rem;padding:3px 8px;margin:2px 0 3px;background:rgba(240,136,62,.1);border-right:3px solid var(--warn);border-radius:0 5px 5px 0;color:var(--warn)">💬 ${c.note}</div>` : (!appr && c.type!=='none' ? `<div style="font-size:.72rem;color:var(--danger);padding:1px 4px">⚠️ חסרה הערה</div>` : '')}`;
       }).join('')
     : `<span style="color:var(--muted);font-size:.82rem">טרם הגיש אילוצים</span>`;
 
