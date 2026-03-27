@@ -524,10 +524,19 @@ function agentSetType(day, value) {
   if (sel) sel.className = 'csel v-'+value;
   const cell = document.getElementById('tcell-'+day);
   if (cell) {
-    const t = agentDraft[day].time||'';
-    if (value==='late')       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>`;
-    else if (value==='early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>`;
-    else                      cell.innerHTML = '';
+    const t    = agentDraft[day].time||'';
+    const note = agentDraft[day].note||'';
+    const noteField = `<input type="text" placeholder="הערה (אופציונלי)" maxlength="60" value="${note.replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:4px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.75rem;padding:3px 8px;outline:none"/>`;
+    const showNote = (value !== 'none');
+    if (value==='late') {
+      cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>${showNote ? noteField : ''}`;
+    } else if (value==='early') {
+      cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>${showNote ? noteField : ''}`;
+    } else if (value==='off') {
+      cell.innerHTML = noteField;
+    } else {
+      cell.innerHTML = '';
+    }
   }
 }
 
