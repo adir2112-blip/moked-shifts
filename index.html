@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>מערכת סידור עבודה – מוקד</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--s2:#1f2937;--border:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--warn:#f0883e;--danger:#ff7b72;--purple:#bc8cff;
+  --text:#e6edf3;--muted:#8b949e;--r:10px;
+}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.screen{display:none;min-height:100vh;padding:0}
+.screen.active{display:flex;flex-direction:column}
+#loginScreen{align-items:center;justify-content:center;padding:24px}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;text-align:center}
+.login-box h1{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.login-box .sub{color:var(--muted);font-size:.88rem;margin-bottom:28px}
+.login-role-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.role-tab{flex:1;padding:9px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.role-tab.active{background:var(--accent);color:#fff}
+.field-grp{display:flex;flex-direction:column;gap:5px;text-align:right;margin-bottom:14px}
+.field-grp label{font-size:.78rem;color:var(--muted);font-weight:600}
+input.inp,select.inp{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.95rem;padding:10px 13px;outline:none;transition:border-color .2s;width:100%}
+input.inp:focus,select.inp:focus{border-color:var(--accent)}
+.err-msg{color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:8px;text-align:center}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:700;transition:opacity .18s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-warn{background:var(--warn);color:#fff}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-sm{padding:6px 14px;font-size:.82rem}
+.btn:hover{opacity:.88}
+.btn-full{width:100%;padding:12px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.topbar-title{font-weight:900;font-size:1rem;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.user-badge{display:flex;align-items:center;gap:8px;font-size:.85rem}
+.role-chip{border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700}
+.role-agent{background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
+.role-manager{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3)}
+.main{flex:1;padding:24px 20px;max-width:1200px;width:100%;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px}
+.card-title{font-size:1.05rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.tab-btn{padding:9px 22px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:500;transition:all .2s}
+.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.week-table{width:100%;border-collapse:separate;border-spacing:0 5px;font-size:.88rem}
+.week-table th{text-align:center;padding:6px 8px;color:var(--muted);font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.week-table th:first-child{text-align:right;padding-right:14px}
+.week-table td{background:var(--s2);text-align:center;padding:9px 8px;vertical-align:middle}
+.week-table td:first-child{border-radius:8px 0 0 8px;text-align:right;padding-right:14px;font-weight:700;width:100px}
+.week-table td:last-child{border-radius:0 8px 8px 0}
+select.csel{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.83rem;padding:5px 8px;cursor:pointer;outline:none;width:100%;max-width:158px}
+select.csel:focus{border-color:var(--accent)}
+select.csel.v-off{color:var(--danger);border-color:rgba(255,123,114,.4)}
+select.csel.v-late{color:var(--warn);border-color:rgba(240,136,62,.4)}
+select.csel.v-early{color:var(--green);border-color:rgba(63,185,80,.4)}
+select.csel.v-none{color:var(--muted)}
+.time-cell{display:flex;align-items:center;gap:6px;justify-content:center}
+.time-lbl{font-size:.72rem;white-space:nowrap}
+input.time-inp{background:var(--bg);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:inherit;font-size:.82rem;padding:4px 7px;outline:none;width:90px;cursor:pointer;animation:fadeIn .18s ease}
+input.time-inp::-webkit-calendar-picker-indicator{filter:invert(.55);cursor:pointer}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.submitted-banner{background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4);border-radius:10px;padding:18px;text-align:center;color:var(--green);font-weight:700;font-size:1rem}
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-bar label{color:var(--muted);font-size:.85rem;font-weight:600}
+select.filter-sel{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.9rem;padding:8px 14px;outline:none;cursor:pointer;min-width:200px}
+select.filter-sel:focus{border-color:var(--accent)}
+.sch-wrapper{overflow-x:auto}
+.sch-table{width:100%;border-collapse:separate;border-spacing:4px;font-size:.82rem;min-width:720px}
+.sch-th-label{width:78px}
+.sch-th-day{background:var(--s2);border-radius:8px;padding:8px 6px;color:var(--accent);font-weight:700;font-size:.77rem;text-align:center;border:1px solid var(--border);line-height:1.5}
+.sch-th-day .th-date{color:var(--muted);font-size:.69rem;font-weight:400;display:block}
+.sch-row-label{border-radius:8px;padding:10px 6px;text-align:center;font-weight:700;font-size:.73rem;line-height:1.6;border:1px solid var(--border);vertical-align:middle}
+.lbl-8{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.3)}
+.lbl-9{background:rgba(88,166,255,.10);color:var(--accent);border-color:rgba(88,166,255,.28)}
+.lbl-off{background:rgba(255,123,114,.08);color:var(--danger);border-color:rgba(255,123,114,.25)}
+.sch-td{border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
+.td-8{background:rgba(63,185,80,.06)}.td-9{background:rgba(88,166,255,.05)}.td-off{background:rgba(255,123,114,.04)}
+.p8{background:rgba(63,185,80,.16);color:#7ee787;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.p9{background:rgba(88,166,255,.16);color:#79c0ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.poff{background:rgba(255,123,114,.14);color:var(--danger);border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.pact{font-size:.69rem;opacity:.65}.no-one{color:var(--muted);font-size:.78rem;font-style:italic}
+.pill-clickable:hover{opacity:.8;transform:scale(1.04);transition:all .15s}
+/* edit modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--s2)}
+/* digital rows */
+.td-d8{background:rgba(188,140,255,.06);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
+.td-d9{background:rgba(188,140,255,.04);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
+.lbl-d8{background:rgba(188,140,255,.12);color:var(--purple);border-color:rgba(188,140,255,.3)}
+.lbl-d9{background:rgba(188,140,255,.08);color:var(--purple);border-color:rgba(188,140,255,.22)}
+.pd8{background:rgba(188,140,255,.18);color:#d2a8ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.pd9{background:rgba(188,140,255,.12);color:#d2a8ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.agent-row{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.agent-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.agent-name{font-weight:700;font-size:.9rem}
+.act-badge{display:inline-block;background:rgba(188,140,255,.14);border:1px solid rgba(188,140,255,.3);color:var(--purple);border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:600}
+.sub-badge{border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:600}
+.sub-yes{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.sub-no{background:rgba(240,136,62,.12);color:var(--warn);border:1px solid rgba(240,136,62,.3)}
+.sub-approved{background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
+.approve-btns{display:flex;gap:6px;flex-wrap:wrap}
+.pending-dot{display:inline-block;background:var(--warn);color:#fff;border-radius:20px;padding:0 7px;font-size:.72rem;font-weight:700;margin-right:4px}
+.download-bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.stats-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.stat-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:.83rem}
+.stat-chip span{font-weight:700;color:var(--accent)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .ico{font-size:2.8rem;margin-bottom:10px}
+/* loading overlay */
+.loading-overlay{position:fixed;inset:0;background:rgba(13,17,23,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:14px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{color:var(--muted);font-size:.9rem}
+@media(max-width:600px){.main{padding:16px 12px}.login-box{padding:28px 20px}}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loadingTxt">טוען...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="screen active">
+  <div class="login-box">
+    <h1>🖥️ מוקד – סידור עבודה</h1>
+    <p class="sub">התחבר כנציג או כמנהל</p>
+    <div class="login-role-tabs">
+      <button class="role-tab active" id="tabAgent"   onclick="setRole('agent')">👤 נציג</button>
+      <button class="role-tab"        id="tabManager" onclick="setRole('manager')">🔑 מנהל</button>
+    </div>
+    <div class="field-grp">
+      <label>שם פרטי</label>
+      <input class="inp" id="loginFirst" placeholder="ישראל" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field-grp">
+      <label>שם משפחה</label>
+      <input class="inp" id="loginLast" placeholder="ישראלי" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field-grp" id="activityFieldWrap">
+      <label>פעילות</label>
+      <select class="inp" id="loginActivity" onchange="onActivityChange()">
+        <option value="">-- בחר פעילות --</option>
+        <option>מובמנט</option><option>מאוחדת</option>
+        <option>פריפיט שירות</option><option>פריפיט מכירות</option>
+        <option>מחלקת סחר</option><option>מעוף לעמית מכירות</option>
+      </select>
+    </div>
+    <div class="field-grp" id="movementTypeWrap" style="display:none">
+      <label>סוג נציג במובמנט</label>
+      <select class="inp" id="loginMovementType">
+        <option value="שיחות">📞 נציג שיחות</option>
+        <option value="דיגיטל">💻 נציג דיגיטל</option>
+      </select>
+    </div>
+    <div class="field-grp" id="emailFieldWrap">
+      <label>כתובת מייל (לקבלת סידור)</label>
+      <input class="inp" type="email" id="loginEmail" placeholder="israel@example.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field-grp" id="phoneFieldWrap">
+      <label>📱 מספר נייד (לזיהוי)</label>
+      <input class="inp" type="tel" id="loginPhone" placeholder="050-1234567" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field-grp">
+      <label>סיסמה</label>
+      <input class="inp" id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="err-msg" id="loginErr"></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">כניסה →</button>
+    <p style="color:var(--muted);font-size:.82rem;font-weight:700;margin-top:20px;letter-spacing:.3px">✦ נבנה על ידי אדיר לוי ✦</p>
+  </div>
+</div>
+
+<!-- EDIT MODAL (from schedule) -->
+<div id="editModal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeScheduleEdit()">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="editModalTitle">✏️ עריכת אילוצים</span>
+      <button class="modal-close" onclick="closeScheduleEdit()">✕</button>
+    </div>
+    <div id="editModalBody"></div>
+  </div>
+</div>
+
+<!-- AGENT SCREEN -->
+<div id="agentScreen" class="screen">
+  <div class="topbar">
+    <span class="topbar-title">🖥️ מוקד – סידור עבודה</span>
+    <div class="user-badge">
+      <span style="color:var(--muted);font-size:.78rem;font-weight:700;letter-spacing:.3px">✦ אדיר לוי</span>
+      <span id="agentNameTag">-</span>
+      <span class="role-chip role-agent">נציג</span>
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="logout()">יציאה</button>
+    </div>
+  </div>
+  <div class="main"><div id="agentContent"></div></div>
+</div>
+
+<!-- MANAGER SCREEN -->
+<div id="managerScreen" class="screen">
+  <div class="topbar">
+    <span class="topbar-title">🖥️ מוקד – סידור עבודה</span>
+    <div class="user-badge">
+      <span style="color:var(--muted);font-size:.78rem;font-weight:700;letter-spacing:.3px">✦ אדיר לוי</span>
+      <span id="managerNameTag">-</span>
+      <span class="role-chip role-manager">מנהל</span>
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="logout()">יציאה</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="tabs">
+      <button class="tab-btn active" id="mgTab1" onclick="mgTab('schedule',this)">📅 סידור עבודה</button>
+      <button class="tab-btn"        id="mgTab2" onclick="mgTab('agents',this)">👥 נציגים ואישורים <span class="pending-dot" id="pendingCount" style="display:none">0</span></button>
+      <button class="tab-btn"        id="mgTab3" onclick="mgTab('history',this)">📚 היסטוריה</button>
+      <button class="tab-btn"        id="mgTab4" onclick="mgTab('stats',this)">📊 סטטיסטיקות</button>
+    </div>
+    <div id="mgSchedulePane"></div>
+    <div id="mgAgentsPane"  style="display:none"></div>
+    <div id="mgHistoryPane" style="display:none"></div>
+    <div id="mgStatsPane"   style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  JSONBIN CONFIG
+// ══════════════════════════════════════════════════════════
+const BIN_ID     = '69c3df29c3097a1dd55b649f';
+const MASTER_KEY = '$2a$10$HWKPxiPXJB6wmLD4jzXZJOHIohHuZ6i.FEADjPiaGYPTqPsN.8GDe';
+const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+// ══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════════
+const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות'];
+const AGENT_PASS   = '12345';
+const MANAGER_PASS = 'Q1w2e3r4!';
+const COPTS = [
+  {v:'none', l:'רגיל',          e:'✅'},
+  {v:'off',  l:'חופש',           e:'🏖'},
+  {v:'late', l:'התחלה מאוחרת',  e:'🌙'},
+  {v:'early',l:'יציאה מוקדמת',  e:'🌅'},
+];
+
+// שעות עבודה קבועות לכל פעילות
+// מובמנט: שיחות = 08–17 / 09–18, דיגיטל = 08–17 / 09–18 (כמו קודם)
+const ACTIVITY_SHIFTS = {
+  'מאוחדת':           { single: '09:00–16:30' },
+  'פריפיט שירות':     { single: '08:00–17:00' },
+  'פריפיט מכירות':    { single: '09:00–18:00' },
+  'מחלקת סחר':        { single: '08:00–17:00' },
+  'מעוף לעמית מכירות':{ single: '09:00–17:00' },
+  'מובמנט':           { shift8: '08:00–17:00', shift9: '09:00–18:00' }, // dual
+};
+
+// צבעים לכל פעילות
+const ACTIVITY_COLORS = {
+  'מובמנט':            { bg:'rgba(63,185,80,.15)',   border:'rgba(63,185,80,.4)',   text:'#7ee787',  hex:'#3fb950' },
+  'מאוחדת':            { bg:'rgba(88,166,255,.15)',   border:'rgba(88,166,255,.4)',  text:'#79c0ff',  hex:'#58a6ff' },
+  'פריפיט שירות':      { bg:'rgba(240,136,62,.15)',   border:'rgba(240,136,62,.4)', text:'#ffa657',  hex:'#f0883e' },
+  'פריפיט מכירות':     { bg:'rgba(255,123,114,.15)',  border:'rgba(255,123,114,.4)',text:'#ff9492',  hex:'#ff7b72' },
+  'מחלקת סחר':         { bg:'rgba(188,140,255,.15)',  border:'rgba(188,140,255,.4)',text:'#d2a8ff',  hex:'#bc8cff' },
+  'מעוף לעמית מכירות': { bg:'rgba(255,212,59,.15)',   border:'rgba(255,212,59,.4)', text:'#ffd43b',  hex:'#ffd43b' },
+};
+function actColor(activity) { return ACTIVITY_COLORS[activity] || { bg:'rgba(139,148,158,.15)', border:'rgba(139,148,158,.3)', text:'var(--muted)', hex:'#8b949e' }; }
+
+let currentRole = 'agent';
+let currentUser = null;
+let autoRefreshTimer = null;
+let localAgents = []; // in-memory cache
+
+// ══════════════════════════════════════════════════════════
+//  WEEK DATES
+// ══════════════════════════════════════════════════════════
+function getNextWeekDates() {
+  const today = new Date();
+  const dow = today.getDay();
+  const skip = dow === 0 ? 7 : 7 - dow;
+  const sun = new Date(today); sun.setDate(today.getDate() + skip);
+  const dates = {};
+  DAYS.forEach((d, i) => {
+    const dt = new Date(sun); dt.setDate(sun.getDate() + i);
+    dates[d] = { date:dt, label:dt.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}) };
+  });
+  return dates;
+}
+const WEEK_DATES = getNextWeekDates();
+
+// ══════════════════════════════════════════════════════════
+//  JSONBIN API — READ / WRITE
+// ══════════════════════════════════════════════════════════
+function showLoading(txt) {
+  document.getElementById('loadingTxt').textContent = txt||'טוען...';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+async function readBin() {
+  const res = await fetch(BIN_URL + '/latest', {
+    method: 'GET',
+    headers: { 'X-Bin-Meta': 'false' }
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'');
+    throw new Error('קריאה נכשלה (' + res.status + '): ' + txt.slice(0,120));
+  }
+  const data = await res.json();
+  if (data && data.record) return data.record.agents || [];
+  if (data && Array.isArray(data.agents)) return data.agents;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+async function writeBin(agents) {
+  const res = await fetch(BIN_URL, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': MASTER_KEY
+    },
+    body: JSON.stringify({ agents })
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'');
+    throw new Error('כתיבה נכשלה (' + res.status + '): ' + txt.slice(0,120));
+  }
+  return true;
+}
+
+// load into memory
+async function loadAgents() {
+  localAgents = await readBin();
+  return localAgents;
+}
+
+// save from memory
+async function saveAgents(arr) {
+  localAgents = arr;
+  await writeBin(arr);
+}
+
+function agentKey(fn, ln, phone) {
+  const base = `${fn.trim()} ${ln.trim()}`.toLowerCase();
+  // אם יש טלפון — משמש כמזהה ייחודי (מונע בלבול בין אנשים עם אותו שם)
+  return phone ? `phone_${phone}` : base;
+}
+
+async function getOrCreateAgent(fn, ln, activity) {
+  const arr = await loadAgents();
+  const key = agentKey(fn, ln, currentUser?.phone || '');
+  let agent = arr.find(a => a.key === key);
+  if (!agent) {
+    const constraints = {};
+    DAYS.forEach(d => constraints[d] = {type:'none', time:''});
+    agent = { key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln, phone: currentUser?.phone||'', activity,
+              movementType: currentUser ? (currentUser.movementType || null) : null,
+              email: currentUser ? (currentUser.email || '') : '',
+              submitted:false, approved:false, constraints };
+    arr.push(agent);
+    await saveAgents(arr);
+  } else {
+    // always sync movementType and activity in case they changed
+    let changed = false;
+    if (currentUser && currentUser.movementType !== undefined && agent.movementType !== currentUser.movementType) {
+      agent.movementType = currentUser.movementType || null;
+      changed = true;
+    }
+    if (currentUser && activity && agent.activity !== activity) {
+      agent.activity = activity;
+      changed = true;
+    }
+    if (currentUser && currentUser.email && agent.email !== currentUser.email) {
+      agent.email = currentUser.email;
+      changed = true;
+    }
+    if (changed) await saveAgents(arr);
+  }
+  return agent;
+}
+
+async function updateAgent(updated) {
+  const arr = await loadAgents();
+  const idx = arr.findIndex(a => a.key === updated.key);
+  if (idx >= 0) arr[idx] = updated; else arr.push(updated);
+  await saveAgents(arr);
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════════
+function setRole(role) {
+  currentRole = role;
+  document.getElementById('tabAgent').classList.toggle('active',   role==='agent');
+  document.getElementById('tabManager').classList.toggle('active', role==='manager');
+  const isAgent = role === 'agent';
+  document.getElementById('activityFieldWrap').style.display  = isAgent ? '' : 'none';
+  document.getElementById('emailFieldWrap').style.display     = isAgent ? '' : 'none';
+  document.getElementById('phoneFieldWrap').style.display     = isAgent ? '' : 'none';
+  document.getElementById('movementTypeWrap').style.display   = 'none';
+  document.getElementById('loginErr').textContent = '';
+}
+
+function onActivityChange() {
+  const act = document.getElementById('loginActivity').value;
+  document.getElementById('movementTypeWrap').style.display = (act === 'מובמנט') ? '' : 'none';
+}
+
+async function doLogin() {
+  const fn   = document.getElementById('loginFirst').value.trim();
+  const ln   = document.getElementById('loginLast').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err  = document.getElementById('loginErr');
+  err.textContent = '';
+
+  if (!fn || !ln) { err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
+
+  if (currentRole === 'agent') {
+    const act = document.getElementById('loginActivity').value;
+    if (pass !== AGENT_PASS)  { err.textContent = 'סיסמה שגויה'; return; }
+    if (!act)                 { err.textContent = 'יש לבחור פעילות'; return; }
+    const movementTypeEl = document.getElementById('loginMovementType');
+    const movementType = (act === 'מובמנט' && movementTypeEl) ? movementTypeEl.value : null;
+    const emailEl = document.getElementById('loginEmail');
+    const email = emailEl ? emailEl.value.trim() : '';
+    const phoneEl = document.getElementById('loginPhone');
+    const phone = phoneEl ? phoneEl.value.replace(/[^0-9]/g,'') : '';
+    currentUser = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}`, activity:act, movementType, email, phone };
+    try { await enterAgent(); } catch(e) { err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
+  } else {
+    if (pass !== MANAGER_PASS){ err.textContent = 'סיסמת מנהל שגויה'; return; }
+    currentUser = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}` };
+    try { await enterManager(); } catch(e) { err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
+  }
+}
+
+function logout() {
+  stopAutoRefresh();
+  currentUser = null;
+  ['loginFirst','loginLast','loginPass'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const act = document.getElementById('loginActivity');
+  if (act) act.value = '';
+  const mt = document.getElementById('loginMovementType');
+  if (mt) mt.value = 'שיחות';
+  const em = document.getElementById('loginEmail');
+  if (em) em.value = '';
+  const ph = document.getElementById('loginPhone');
+  if (ph) ph.value = '';
+  document.getElementById('movementTypeWrap').style.display = 'none';
+  document.getElementById('loginErr').textContent = '';
+  showScreen('loginScreen');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTO-REFRESH
+// ══════════════════════════════════════════════════════════
+function startAutoRefresh(fn) { stopAutoRefresh(); autoRefreshTimer = setInterval(fn, 8000); }
+function stopAutoRefresh()    { if (autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; } }
+
+// ══════════════════════════════════════════════════════════
+//  AGENT FLOW
+// ══════════════════════════════════════════════════════════
+async function enterAgent() {
+  showLoading('מתחבר...');
+  try {
+    document.getElementById('agentNameTag').textContent = currentUser.fullName;
+    showScreen('agentScreen');
+    await renderAgentContent();
+  } catch(e) {
+    const container = document.getElementById('agentContent');
+    container.innerHTML = `
+      <div style="background:rgba(255,123,114,.1);border:1px solid rgba(255,123,114,.4);border-radius:10px;padding:20px;text-align:center;color:var(--danger)">
+        <div style="font-size:1.5rem;margin-bottom:8px">⚠️</div>
+        <div style="font-weight:700;margin-bottom:6px">שגיאה בחיבור לשרת</div>
+        <div style="font-size:.84rem;color:var(--muted);margin-bottom:14px">${e.message}</div>
+        <button class="btn btn-primary" onclick="retryAgentLoad()">נסה שוב</button>
+      </div>`;
+  } finally { hideLoading(); }
+}
+
+async function retryAgentLoad() {
+  showLoading('מנסה שוב...');
+  try {
+    await renderAgentContent();
+  } catch(e) {
+    alert('שגיאה: ' + e.message);
+  } finally { hideLoading(); }
+}
+
+// agent draft — holds unsent selections in memory
+let agentDraft = {};
+
+function agentSetType(day, value) {
+  if (!agentDraft[day]) agentDraft[day] = {type:'none', time:''};
+  agentDraft[day].type = value;
+  if (value==='none'||value==='off') agentDraft[day].time = '';
+  const sel = document.getElementById('csel-'+day);
+  if (sel) sel.className = 'csel v-'+value;
+  const cell = document.getElementById('tcell-'+day);
+  if (cell) {
+    const t = agentDraft[day].time||'';
+    if (value==='late')       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    else if (value==='early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    else                      cell.innerHTML = '';
+  }
+}
+
+function agentSetTime(day, value) {
+  if (!agentDraft[day]) agentDraft[day] = {type:'none', time:''};
+  agentDraft[day].time = value;
+}
+
+function agentSetNote(day, value) {
+  if (!agentDraft[day]) agentDraft[day] = {type:'none', time:''};
+  agentDraft[day].note = value;
+}
+
+async function renderAgentContent() {
+  const agent = await getOrCreateAgent(currentUser.firstName, currentUser.lastName, currentUser.activity);
+  const container = document.getElementById('agentContent');
+
+  if (agent.submitted) {
+    container.innerHTML = `
+      <div class="submitted-banner">
+        ✅ שלחת את האילוצים שלך לשבוע הבא בהצלחה!<br>
+        <span style="font-size:.85rem;font-weight:400;color:var(--muted);margin-top:6px;display:block">
+          ${agent.approved ? '✔ המנהל אישר את האילוצים שלך.' : '⏳ ממתין לאישור המנהל.'}
+        </span>
+      </div>
+      <div style="margin-top:20px">${renderConstraintSummary(agent)}</div>`;
+    return;
+  }
+
+  renderAgentEditForm(agent, container);
+}
+
+function renderAgentEditForm(agent, container) {
+  const rows = DAYS.map(day => {
+    const c   = agent.constraints[day]||{type:'none',time:''};
+    const val = c.type||'none';
+    const opts = COPTS.map(o=>`<option value="${o.v}" ${val===o.v?'selected':''}>${o.e} ${o.l}</option>`).join('');
+    let timeH = '';
+    if (val==='late')  timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    if (val==='early') timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    const showNote = val !== 'none';
+    const noteH = showNote ? `<input type="text" placeholder="הערה (אופציונלי)" maxlength="60" value="${(c.note||'').replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:4px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.75rem;padding:3px 8px;outline:none"/>` : '';
+    return `<tr>
+      <td>יום ${day}<br><span style="font-size:.72rem;color:var(--muted);font-weight:400">${WEEK_DATES[day].label}</span></td>
+      <td><select class="csel v-${val}" id="csel-${day}" onchange="agentSetType('${day}',this.value)">${opts}</select></td>
+      <td id="tcell-${day}" style="min-width:155px">${timeH}${noteH}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-title">📋 אילוצים לשבוע הבא &nbsp;<span style="color:var(--muted);font-size:.82rem;font-weight:400">${WEEK_DATES['ראשון'].label} – ${WEEK_DATES['שישי'].label}</span></div>
+      <p style="color:var(--muted);font-size:.84rem;margin-bottom:16px">בחר אילוץ לכל יום. תוכל לשלוח <strong style="color:var(--text)">פעם אחת בלבד</strong> לשבוע זה.</p>
+      <table class="week-table">
+        <thead><tr><th>יום</th><th>אילוץ</th><th>שעה</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:20px;display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" onclick="agentShowReview()" style="padding:11px 30px;font-size:1rem">סקירה לפני שליחה ←</button>
+      </div>
+    </div>`;
+}
+
+function agentShowReview() {
+  // collect current selections from DOM
+  const container = document.getElementById('agentContent');
+  const draft = {};
+  DAYS.forEach(day => {
+    const sel  = document.getElementById('csel-'+day);
+    const tinp = document.querySelector(`#tcell-${day} input`);
+    draft[day] = { type: sel ? sel.value : 'none', time: tinp ? tinp.value : '' };
+  });
+  agentDraft = draft;
+
+  const typeColor = {none:'var(--muted)', off:'var(--green)', late:'var(--warn)', early:'var(--accent2)'};
+  const typeStyle = {none:'', off:'color:var(--green);font-weight:700', late:'color:var(--warn);font-weight:700', early:'color:var(--green);font-weight:700'};
+  const SHIFT_MAP = {none:'08:00–17:00 / 09:00–18:00', early:'08:00–17:00', late:'09:00–18:00', off:'חופש'};
+
+  const reviewRows = DAYS.map(day => {
+    const c   = draft[day]||{type:'none',time:''};
+    const opt = COPTS.find(o=>o.v===c.type)||COPTS[0];
+    const shift = SHIFT_MAP[c.type]||'';
+    const timeStr = c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
+    const dot = c.type!=='none' ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor[c.type]};margin-left:6px;flex-shrink:0"></span>` : '';
+    return `<div style="padding:8px 12px;background:var(--s2);border-radius:8px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="color:var(--muted);font-size:.82rem;min-width:90px;flex-shrink:0">יום ${day} <span style="font-size:.7rem">${WEEK_DATES[day].label}</span></span>
+        ${dot}
+        <span style="font-size:.88rem;flex:1;${typeStyle[c.type]||''}">${opt.e} ${opt.l}${timeStr}</span>
+        <span style="font-size:.75rem;color:var(--muted)">${shift}</span>
+      </div>
+      ${c.note ? `<div style="font-size:.73rem;color:var(--muted);margin-top:3px;padding-right:4px;font-style:italic">💬 ${c.note}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-title">🔍 סקירת האילוצים לפני שליחה</div>
+      <p style="color:var(--muted);font-size:.84rem;margin-bottom:16px">בדוק שהכל נכון לפני שליחה למנהל.</p>
+      <div style="margin-bottom:20px">${reviewRows}</div>
+
+      <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:10px;padding:16px;margin-bottom:20px">
+        <p style="color:var(--green);font-weight:700;font-size:.95rem;margin-bottom:4px">✋ בדקו שהכל תקין</p>
+        <p style="color:var(--muted);font-size:.84rem;margin:0">לאחר השליחה לא ניתן לשנות. לחיצה על "חזור" תאפשר עריכה.</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <button class="btn" style="background:var(--s2);color:var(--muted)" onclick="agentBackToEdit()">← חזור לעריכה</button>
+        <button class="btn btn-success" id="confirmBtn" onclick="agentConfirmAndSubmit()" style="padding:12px 32px;font-size:1rem;letter-spacing:.3px">
+          ✅ בדקתי הכל תקין – שלח למנהל
+        </button>
+      </div>
+    </div>`;
+}
+
+async function agentBackToEdit() {
+  // rebuild form with draft values
+  const agent = await getOrCreateAgent(currentUser.firstName, currentUser.lastName, currentUser.activity);
+  // apply draft to agent constraints temporarily for rendering
+  DAYS.forEach(day => {
+    if (agentDraft[day]) agent.constraints[day] = agentDraft[day];
+  });
+  const container = document.getElementById('agentContent');
+  renderAgentEditForm(agent, container);
+  // restore selects from draft
+  DAYS.forEach(day => {
+    const sel  = document.getElementById('csel-'+day);
+    const cell = document.getElementById('tcell-'+day);
+    const c    = agentDraft[day]||{type:'none',time:''};
+    if (sel) {
+      sel.value = c.type;
+      sel.className = 'csel v-'+c.type;
+    }
+    if (cell && c.type === 'late')  cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    if (cell && c.type === 'early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+  });
+}
+
+async function agentConfirmAndSubmit() {
+  const btn = document.getElementById('confirmBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'שולח...'; }
+  showLoading('שולח אילוצים...');
+  try {
+    const agent = await getOrCreateAgent(currentUser.firstName, currentUser.lastName, currentUser.activity);
+    DAYS.forEach(day => {
+      const sel  = document.getElementById('csel-'+day);
+      const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
+      const ninp = document.getElementById('note-'+day);
+      const existing = agentDraft[day] || agent.constraints[day] || {type:'none',time:''};
+      agent.constraints[day] = {
+        type: sel ? sel.value : existing.type,
+        time: tinp ? tinp.value : existing.time,
+        note: ninp ? ninp.value : (existing.note||'')
+      };
+    });
+    agent.submitted = true;
+    await updateAgent(agent);
+    agentDraft = {};
+    await renderAgentContent();
+  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+// keep agentSubmit as alias (used nowhere new but safe)
+async function agentSubmit() { await agentConfirmAndSubmit(); }
+
+function renderConstraintSummary(agent) {
+  const rows = DAYS.map(day => {
+    const c = agent.constraints[day]||{type:'none',time:''};
+    const opt = COPTS.find(o=>o.v===c.type)||COPTS[0];
+    const timeStr = c.time ? ` (${c.type==='late'?'משעה':'עד שעה'}: ${c.time})` : '';
+    return `<tr>
+      <td style="padding:6px 14px;font-weight:700">יום ${day} ${WEEK_DATES[day].label}</td>
+      <td style="padding:6px 10px">${opt.e} ${opt.l}${timeStr}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">📄 סיכום האילוצים שנשלחו</div>
+    <table style="font-size:.88rem;width:100%"><tbody>${rows}</tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  MANAGER FLOW
+// ══════════════════════════════════════════════════════════
+async function enterManager() {
+  showLoading('טוען נתונים...');
+  try {
+    document.getElementById('managerNameTag').textContent = currentUser.fullName;
+    showScreen('managerScreen');
+    await loadAgents();
+    renderMgSchedule();
+    await renderMgAgents();
+    updatePendingBadge();
+    startAutoRefresh(async () => {
+      if (!currentlyEditingKey) {
+        try {
+          await loadAgents();
+          updatePendingBadge();
+          const agentsTabActive = document.getElementById('mgTab2').classList.contains('active');
+          if (agentsTabActive) await renderMgAgents();
+          else renderMgScheduleIfGenerated();
+        } catch(e) { /* silent */ }
+      }
+    });
+  } catch(e) { alert('שגיאה בחיבור לענן: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+function updatePendingBadge() {
+  const pending = localAgents.filter(a => a.submitted && !a.approved).length;
+  const dot = document.getElementById('pendingCount');
+  if (!dot) return;
+  if (pending > 0) { dot.style.display='inline-block'; dot.textContent=pending; }
+  else             { dot.style.display='none'; }
+}
+
+let lastGeneratedFilter = null;
+let lastBuiltSched = null;
+let mgAgentsFilter = '';
+
+function mgTab(pane, btn) {
+  document.querySelectorAll('#managerScreen .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mgSchedulePane').style.display = pane==='schedule' ? '' : 'none';
+  document.getElementById('mgAgentsPane').style.display   = pane==='agents'   ? '' : 'none';
+  document.getElementById('mgHistoryPane').style.display  = pane==='history'  ? '' : 'none';
+  document.getElementById('mgStatsPane').style.display    = pane==='stats'    ? '' : 'none';
+  if (pane==='schedule') renderMgSchedule();
+  if (pane==='agents')   renderMgAgents();
+  if (pane==='history')  renderHistory();
+  if (pane==='stats')    renderStats();
+}
+
+// ── Schedule Tab ──
+function renderMgSchedule() {
+  const pane = document.getElementById('mgSchedulePane');
+  const existingFilter = pane.querySelector('#actFilter');
+  const selected = existingFilter ? existingFilter.value : '';
+  const actOpts = ['', ...ACTIVITIES].map(a =>
+    `<option value="${a}" ${a===selected?'selected':''}>${a||'-- כל הפעילויות --'}</option>`
+  ).join('');
+  const existingOutput = document.getElementById('scheduleOutput') ? document.getElementById('scheduleOutput').innerHTML : '';
+  // כפתור מחיקה רק כשנבחרת פעילות ספציפית
+  const clearBtn = selected
+    ? `<button class="btn btn-danger btn-sm" onclick="clearScheduleForActivity('${selected}')">🗑 מחק סידור – ${selected}</button>`
+    : '';
+  pane.innerHTML = `
+    <div class="filter-bar">
+      <label>📂 פעילות:</label>
+      <select class="filter-sel" id="actFilter" onchange="renderMgSchedule()">${actOpts}</select>
+      <button class="btn btn-success" onclick="generateAndRender()">⚡ צור סידור</button>
+      <button class="btn btn-warn btn-sm" onclick="resetAllSubmissions()">🔄 אפס שבוע חדש</button>
+      ${clearBtn}
+    </div>
+    <div id="scheduleOutput">${existingOutput}</div>`;
+}
+
+function renderMgScheduleIfGenerated() {
+  if (lastGeneratedFilter === null) return;
+  const filterEl = document.getElementById('actFilter');
+  if (filterEl) filterEl.value = lastGeneratedFilter;
+  generateAndRender(true);
+}
+
+function generateAndRender(silent) {
+  const filterEl  = document.getElementById('actFilter');
+  const actFilter = filterEl ? filterEl.value : '';
+  if (!silent) lastGeneratedFilter = actFilter;
+  const pool = localAgents.filter(a => a.submitted && a.approved && (!actFilter || a.activity === actFilter));
+  const output = document.getElementById('scheduleOutput');
+  if (!output) return;
+  if (!pool.length) {
+    output.innerHTML = `<div class="empty"><div class="ico">😕</div><p>אין נציגים מאושרים${actFilter?' עבור '+actFilter:''}</p></div>`;
+    return;
+  }
+  const sched = buildSchedule(pool);
+  output.innerHTML = renderScheduleTable(sched, pool.length, actFilter);
+  // שמור את הסידור האחרון בזיכרון לשליחת מיילים ידנית
+  lastBuiltSched = { sched, pool, actFilter };
+  // שמור להיסטוריה
+  saveToHistory(sched, pool, actFilter);
+}
+
+async function sendScheduleEmailsToAll(agentList, sched) {
+  for (const agent of agentList) {
+    if (!agent.email) continue;
+    const assignedShifts = {};
+    const actShift = ACTIVITY_SHIFTS[agent.activity];
+    DAYS.forEach(day => {
+      const d  = sched[day];
+      const c  = agent.constraints[day]||{type:'none',time:''};
+      const ms = agent.managerShift?.[day] || ''; // '8' | '9' | ''
+
+      if (d.dayOff.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = 'חופש';
+      } else if (actShift?.single) {
+        // פעילות עם שעות קבועות
+        assignedShifts[day] = actShift.single;
+      } else if (d.digital8.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = 'דיגיטל 08:00–17:00';
+      } else if (d.digital9.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = 'דיגיטל 09:00–18:00';
+      } else if (c.type === 'early') {
+        assignedShifts[day] = '08:00–17:00';
+      } else if (c.type === 'late') {
+        assignedShifts[day] = '09:00–18:00';
+      } else if (ms === '8') {
+        assignedShifts[day] = '08:00–17:00';
+      } else if (ms === '9') {
+        assignedShifts[day] = '09:00–18:00';
+      } else if (d.shift8.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = '08:00–17:00';
+      } else if (d.shift9.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = '09:00–18:00';
+      } else {
+        assignedShifts[day] = 'יקבע על ידי המנהל';
+      }
+    });
+    await sendApprovalEmail(agent, assignedShifts);
+  }
+}
+
+function buildSchedule(agentList) {
+  const result = {};
+  const FULL_SHIFT = 8.5;
+
+  // שלב 1: לנציגים "חופשיים" (none, ללא בחירת מנהל) — קבע שיבוץ רנדומלי פעם אחת ושמור
+  // כך שכל לחיצה חוזרת על "צור סידור" לא תשנה את השיבוץ
+  let needsSave = false;
+  agentList.forEach(agent => {
+    const isDigital = (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
+    const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
+    if (!isDigital && !isSingle) {
+      DAYS.forEach(day => {
+        const c = agent.constraints[day]||{type:'none',time:''};
+        const ms = agent.managerShift?.[day] || '';
+        // רק ביום "רגיל" ובלי בחירת מנהל — קבע רנדומלי ושמור
+        if (c.type === 'none' && !ms) {
+          if (!agent.managerShift) agent.managerShift = {};
+          agent.managerShift[day] = Math.random() < 0.5 ? '8' : '9';
+          needsSave = true;
+        }
+      });
+    }
+    if (isDigital) {
+      DAYS.forEach(day => {
+        const c = agent.constraints[day]||{type:'none',time:''};
+        const ms = agent.managerShift?.[day] || '';
+        if (c.type === 'none' && !ms) {
+          if (!agent.managerShift) agent.managerShift = {};
+          agent.managerShift[day] = Math.random() < 0.5 ? 'd8' : 'd9';
+          needsSave = true;
+        }
+      });
+    }
+  });
+  // שמור לענן בלי לחכות (async fire-and-forget)
+  if (needsSave) saveAgents(localAgents).catch(()=>{});
+
+  // שלב 2: בנה את הסידור לפי השיבוצים השמורים
+  DAYS.forEach(day => {
+    const shift8=[], shift9=[], digital8=[], digital9=[], dayOff=[];
+    agentList.forEach(agent => {
+      const c = agent.constraints[day]||{type:'none',time:''};
+      const isDigital = (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
+      const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
+      const ms = agent.managerShift?.[day] || '';
+      const entry = {name:agent.fullName, activity:agent.activity, movementType:agent.movementType||null, time:c.time, constraintType:c.type};
+
+      if (c.type === 'off') {
+        dayOff.push(entry);
+      } else if (isDigital) {
+        if      (c.type === 'early') digital8.push(entry);
+        else if (c.type === 'late')  digital9.push(entry);
+        else if (ms === 'd8')        digital8.push(entry);
+        else                         digital9.push(entry);
+      } else if (isSingle) {
+        shift8.push(entry);
+      } else {
+        // מובמנט שיחות — לפי managerShift (שכולל גם את הרנדומלי השמור)
+        if      (c.type === 'early') shift8.push(entry);
+        else if (c.type === 'late')  shift9.push(entry);
+        else if (ms === '8')         shift8.push(entry);
+        else                         shift9.push(entry);
+      }
+    });
+
+    const calcTakanim = (list) => list.reduce((sum, a) => {
+      if (a.constraintType === 'early' && a.time) {
+        const [h, m] = a.time.split(':').map(Number);
+        return sum + Math.max(0, (h + m/60) - 8) / FULL_SHIFT;
+      } else if (a.constraintType === 'late' && a.time) {
+        const [h, m] = a.time.split(':').map(Number);
+        return sum + Math.max(0, 18 - (h + m/60)) / FULL_SHIFT;
+      }
+      return sum + 1;
+    }, 0);
+
+    const takanim = {
+      shift8:   calcTakanim(shift8),
+      shift9:   calcTakanim(shift9),
+      digital8: calcTakanim(digital8),
+      digital9: calcTakanim(digital9),
+      total: 0
+    };
+    takanim.total = takanim.shift8 + takanim.shift9 + takanim.digital8 + takanim.digital9;
+    result[day] = {shift8, shift9, digital8, digital9, dayOff, takanim};
+  });
+  return result;
+}
+
+function renderScheduleTable(sched, total, actFilter) {
+  const title = actFilter ? `סידור עבודה – ${actFilter}` : 'סידור עבודה – כל הפעילויות';
+  const isMovement = actFilter === 'מובמנט';
+  const actShift = ACTIVITY_SHIFTS[actFilter];
+  const isSingle = actShift?.single; // פעילות עם שורה אחת
+
+  // תוויות שורה לפי פעילות
+  const label8 = isSingle
+    ? `☀️<br>${actShift.single.replace('–','–<br>')}`
+    : `☀️<br>שיחות<br>08:00<br>–<br>17:00`;
+
+  const pills = (list, cls) => list.length
+    ? list.map(a => {
+        const act = (!actFilter && a.activity) ? `<span class="pact"> · ${a.activity}</span>` : '';
+        const tm  = a.time ? `<span class="pact"> ⏰${a.time}</span>` : '';
+        const agentObj = localAgents.find(x => x.fullName === a.name);
+        const safeKey  = agentObj ? agentObj.key.replace(/[\s']/g,'_') : '';
+        const clickable = safeKey ? `onclick="openScheduleEdit('${safeKey}')" style="cursor:pointer" title="לחץ לעריכה"` : '';
+        // color pill by activity when showing all activities
+        const ac = actColor(a.activity);
+        const pillStyle = !actFilter && a.activity ? `style="background:${ac.bg};border:1px solid ${ac.border};color:${ac.text}"` : '';
+        return `<span class="${cls} pill-clickable" ${clickable} ${pillStyle}>${a.name}${act}${tm}</span>`;
+      }).join('')
+    : `<span class="no-one">—</span>`;
+
+  const hdr  = DAYS.map(d => `<th class="sch-th-day">יום ${d}<span class="th-date">${WEEK_DATES[d].label}</span></th>`).join('');
+  const row8 = DAYS.map(d => `<td class="sch-td td-8">${pills(sched[d].shift8,'p8')}</td>`).join('');
+  const row9 = DAYS.map(d => `<td class="sch-td td-9">${pills(sched[d].shift9,'p9')}</td>`).join('');
+  const rowO = DAYS.map(d => `<td class="sch-td td-off">${pills(sched[d].dayOff,'poff')}</td>`).join('');
+
+  const t8   = DAYS.reduce((s,d)=>s+sched[d].shift8.length,0);
+  const t9   = DAYS.reduce((s,d)=>s+sched[d].shift9.length,0);
+  const tOff = DAYS.reduce((s,d)=>s+sched[d].dayOff.length,0);
+
+  // שורת 09–18 — רק למובמנט (שתי משמרות)
+  const row9HTML = (!isSingle)
+    ? `<tr><td class="sch-row-label lbl-9">🌤️<br>שיחות<br>09:00<br>–<br>18:00</td>${row9}</tr>`
+    : '';
+
+  // שורות דיגיטל — רק למובמנט
+  let digitalRows = '', digitalStats = '';
+  if (isMovement) {
+    const rowD8 = DAYS.map(d => `<td class="sch-td td-d8">${pills(sched[d].digital8,'pd8')}</td>`).join('');
+    const rowD9 = DAYS.map(d => `<td class="sch-td td-d9">${pills(sched[d].digital9,'pd9')}</td>`).join('');
+    const tD8 = DAYS.reduce((s,d)=>s+sched[d].digital8.length,0);
+    const tD9 = DAYS.reduce((s,d)=>s+sched[d].digital9.length,0);
+    digitalRows = `
+      <tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>08:00<br>–<br>17:00</td>${rowD8}</tr>
+      <tr><td class="sch-row-label lbl-d9">💻<br>דיגיטל<br>09:00<br>–<br>18:00</td>${rowD9}</tr>`;
+    digitalStats = `
+      <div class="stat-chip">💻 דיגיטל 08–17: <span>${tD8}</span></div>
+      <div class="stat-chip">💻 דיגיטל 09–18: <span>${tD9}</span></div>`;
+  }
+
+  // שורת תקנים
+  const fmtT = (n) => {
+    if (n === 0) return '—';
+    const r = Math.round(n * 4) / 4;
+    return r % 1 === 0 ? r.toString() : r.toFixed(2).replace(/\.?0+$/, '');
+  };
+  const totalTakanim = DAYS.reduce((s,d) => s + (sched[d].takanim?.total||0), 0);
+  const rowTakanim = DAYS.map(d => {
+    const t = sched[d].takanim || {};
+    const tot = t.total || 0;
+    const color = tot >= 4 ? 'var(--green)' : tot >= 2 ? 'var(--warn)' : 'var(--danger)';
+    return `<td class="sch-td" style="background:rgba(255,255,255,.03);text-align:center;vertical-align:middle">
+      <div style="font-size:1.1rem;font-weight:900;color:${color}">${fmtT(tot)}</div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:2px">תקנים</div>
+    </td>`;
+  }).join('');
+
+  // סטטיסטיקת נציגים
+  const statsLabel8 = isSingle
+    ? `${actShift.single}: <span>${t8}</span>`
+    : `☀️ שיחות 08–17: <span>${t8}</span>`;
+
+  return `
+    <div class="stats-bar">
+      <div class="stat-chip">פעילות: <span>${actFilter||'כולן'}</span></div>
+      <div class="stat-chip">נציגים: <span>${total}</span></div>
+      <div class="stat-chip">${statsLabel8}</div>
+      ${!isSingle ? `<div class="stat-chip">🌤 שיחות 09–18: <span>${t9}</span></div>` : ''}
+      ${digitalStats}
+      <div class="stat-chip">🏖 חופש: <span>${tOff}</span></div>
+      <div class="stat-chip">📊 סה"כ תקנים (שבוע): <span>${fmtT(totalTakanim)}</span></div>
+    </div>
+    <div id="scheduleCapture" class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:.95rem">📅 ${title}</div>
+      <div style="padding:16px" class="sch-wrapper">
+        <table class="sch-table">
+          <thead><tr><th class="sch-th-label"></th>${hdr}</tr></thead>
+          <tbody>
+            <tr><td class="sch-row-label lbl-8">${label8}</td>${row8}</tr>
+            ${row9HTML}
+            ${digitalRows}
+            <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowO}</tr>
+            <tr>
+              <td class="sch-row-label" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:var(--muted);font-size:.7rem">📊<br>כמות<br>תקנים</td>
+              ${rowTakanim}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="download-bar">
+      <button class="btn btn-purple" onclick="downloadAsImage()">📸 הורד כתמונה</button>
+      <button class="btn btn-primary" onclick="sendEmailsManually()" id="sendEmailsBtn">📧 שלח סידור לעובדים במייל</button>
+      <button class="btn btn-success btn-sm" onclick="exportToExcel()">📊 ייצוא לאקסל</button>
+    </div>`;
+}
+
+async function sendEmailsManually() {
+  if (!lastBuiltSched) { alert('יש ליצור סידור עבודה תחילה'); return; }
+  const { sched, pool } = lastBuiltSched;
+  const withEmail = pool.filter(a => a.email);
+  if (!withEmail.length) { alert('אין עובדים עם כתובת מייל'); return; }
+  const btn = document.getElementById('sendEmailsBtn');
+  if (btn) { btn.disabled = true; btn.textContent = `📤 שולח ל-${withEmail.length} עובדים...`; }
+  try {
+    await sendScheduleEmailsToAll(withEmail, sched);
+    if (btn) { btn.textContent = `✅ נשלח ל-${withEmail.length} עובדים!`; }
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '📧 שלח סידור לעובדים במייל'; }}, 3000);
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '📧 שלח סידור לעובדים במייל'; }
+    alert('שגיאה בשליחה: ' + e.message);
+  }
+}
+
+function downloadAsImage() {
+  const el = document.getElementById('scheduleCapture');
+  if (!el) return;
+  const doCapture = () => {
+    const filterEl = document.getElementById('actFilter');
+    const fname = `סידור_${(filterEl&&filterEl.value)||'כולן'}.png`;
+    html2canvas(el, {backgroundColor:'#161b22', scale:2, useCORS:true}).then(canvas => {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png'); a.download = fname; a.click();
+    });
+  };
+  if (typeof html2canvas === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = doCapture; document.head.appendChild(s);
+  } else { doCapture(); }
+}
+
+// ── Agents Tab ──
+async function renderMgAgents() {
+  const pane = document.getElementById('mgAgentsPane');
+  const existingFilter = document.getElementById('agentActFilter');
+  if (existingFilter) mgAgentsFilter = existingFilter.value;
+
+  const all = localAgents;
+  const submitted = all.filter(a=>a.submitted).length;
+  const approved  = all.filter(a=>a.approved).length;
+  const pending   = all.filter(a=>a.submitted&&!a.approved).length;
+  const actOpts = ['', ...ACTIVITIES].map(a =>
+    `<option value="${a}" ${a===mgAgentsFilter?'selected':''}>${a||'-- כל הפעילויות --'}</option>`
+  ).join('');
+  const visible = mgAgentsFilter ? all.filter(a=>a.activity===mgAgentsFilter) : all;
+  const cards = visible.map(agent => buildAgentCard(agent)).join('');
+
+  if (!all.length) {
+    pane.innerHTML = `<div class="empty"><div class="ico">👥</div><p>אין נציגים רשומים עדיין</p></div>`;
+    return;
+  }
+
+  const deleteAgentsBtn = mgAgentsFilter
+    ? `<button class="btn btn-danger btn-sm" onclick="deleteAgentsForActivity('${mgAgentsFilter}')">🗑 מחק נציגים – ${mgAgentsFilter}</button>`
+    : '';
+
+  pane.innerHTML = `
+    <div class="stats-bar">
+      <div class="stat-chip">סה"כ נציגים: <span>${all.length}</span></div>
+      <div class="stat-chip">הגישו: <span>${submitted}</span></div>
+      <div class="stat-chip" style="${pending?'color:var(--warn)':''}">ממתינים לאישור: <span>${pending}</span></div>
+      <div class="stat-chip">מאושרים: <span>${approved}</span></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">👥 נציגים ואישורים</div>
+        <select class="filter-sel" id="agentActFilter" style="min-width:180px;max-width:240px"
+          onchange="mgAgentsFilter=this.value; renderMgAgents()">
+          ${actOpts}
+        </select>
+        <span style="color:var(--muted);font-size:.82rem">${visible.length} מוצגים</span>
+        ${deleteAgentsBtn}
+      </div>
+      <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בפעילות זו</div>`}</div>
+    </div>`;
+}
+
+function buildAgentCard(agent) {
+  const sub = agent.submitted, appr = agent.approved;
+  const safeKey = agent.key.replace(/[\s']/g,'_');
+  const isMovement = agent.activity === 'מובמנט';
+  const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--accent2)'};
+  const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
+
+  const dayRows = sub
+    ? DAYS.map(day => {
+        const c = agent.constraints[day]||{type:'none',time:''};
+        const o = COPTS.find(x=>x.v===c.type)||COPTS[0];
+        const t = c.time ? ` מ-${c.time}` : '';
+        const dot = c.type!=='none' ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${typeColor[c.type]};margin-left:5px;flex-shrink:0"></span>` : '';
+
+        // כפתורי שיבוץ ידני — רק למובמנט ביום "רגיל"
+        let shiftToggle = '';
+        if (isMovement && c.type === 'none') {
+          const ms = agent.managerShift?.[day] || '';
+          const btn8 = `<button onclick="setManagerShift('${agent.key}','${day}','8')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms==='8'?'var(--green)':'var(--border)'};background:${ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms==='8'?'var(--green)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">08–17</button>`;
+          const btn9 = `<button onclick="setManagerShift('${agent.key}','${day}','9')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms==='9'?'var(--accent)':'var(--border)'};background:${ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms==='9'?'var(--accent)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">09–18</button>`;
+          shiftToggle = `<div style="display:flex;gap:4px;margin-right:4px">${btn8}${btn9}</div>`;
+        }
+
+        return `<div style="display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:.78rem;min-width:52px;flex-shrink:0">יום ${day}</span>
+          <span style="color:var(--border);font-size:.78rem">·</span>
+          ${dot}
+          <span style="font-size:.8rem;${typeStyle[c.type]||''};flex:1">${o.e} ${o.l}${t}</span>
+          ${shiftToggle}
+        </div>
+        ${c.note ? `<div style="font-size:.72rem;color:var(--muted);padding:1px 0 2px 4px;font-style:italic">💬 ${c.note}</div>` : ''}`;
+      }).join('')
+    : `<span style="color:var(--muted);font-size:.82rem">טרם הגיש אילוצים</span>`;
+
+  let statusBadge;
+  if (!sub)      statusBadge = `<span class="sub-badge sub-no">⏳ טרם הגיש</span>`;
+  else if (appr) statusBadge = `<span class="sub-badge sub-approved">✔ מאושר</span>`;
+  else           statusBadge = `<span class="sub-badge sub-yes">📨 ממתין</span>`;
+
+  let actionBtns = '';
+  if (sub && appr) {
+    actionBtns = `<div class="approve-btns" style="margin-top:8px">
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="toggleEditAgent('${safeKey}')">✏️ ערוך</button>
+      <button class="btn btn-sm btn-warn" onclick="revokeAgent('${agent.key}')">בטל אישור</button>
+    </div>`;
+  } else if (sub && !appr) {
+    actionBtns = `<div class="approve-btns" style="margin-top:8px">
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="toggleEditAgent('${safeKey}')">✏️ ערוך</button>
+      <button class="btn btn-sm btn-success" onclick="approveAgent('${agent.key}')">✔ אשר</button>
+      <button class="btn btn-sm btn-danger"  onclick="rejectAgent('${agent.key}')">✖ דחה</button>
+    </div>`;
+  }
+
+  const _ac = actColor(agent.activity);
+  const actBadge = agent.activity ? `<span class="act-badge" style="background:${_ac.bg};border-color:${_ac.border};color:${_ac.text}">🏷 ${agent.activity}${agent.movementType ? ' · '+agent.movementType : ''}</span>` : '';
+  return `<div class="agent-row" id="ar-${safeKey}">
+    <div class="agent-row-top"><span class="agent-name">👤 ${agent.fullName}</span>${statusBadge}</div>
+    ${actBadge}
+    <div style="margin-top:8px" id="csummary-${safeKey}">${dayRows}</div>
+    <div id="editpanel-${safeKey}" style="display:none"></div>
+    ${actionBtns}
+  </div>`;
+}
+
+async function setManagerShift(key, day, shift) {
+  const agent = localAgents.find(a => a.key === key);
+  if (!agent) return;
+  if (!agent.managerShift) agent.managerShift = {};
+  // toggle — אם לוחצים שוב על אותו כפתור מבטלים
+  agent.managerShift[day] = agent.managerShift[day] === shift ? '' : shift;
+  await saveAgents(localAgents);
+  renderMgAgents();
+}
+
+function buildDayRows(agent) {
+  if (!agent.submitted) return `<span style="color:var(--muted);font-size:.82rem">טרם הגיש אילוצים</span>`;
+  const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--green)'};
+  const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
+  return DAYS.map(day => {
+    const c = agent.constraints[day]||{type:'none',time:''};
+    const o = COPTS.find(x=>x.v===c.type)||COPTS[0];
+    const t = c.time ? ` מ-${c.time}` : '';
+    const dot = c.type!=='none' ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${typeColor[c.type]};margin-left:5px;flex-shrink:0"></span>` : '';
+    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <span style="color:var(--muted);font-size:.78rem;min-width:52px;flex-shrink:0">יום ${day}</span>
+      <span style="color:var(--border);font-size:.78rem">·</span>${dot}
+      <span style="font-size:.8rem;${typeStyle[c.type]||''}">${o.e} ${o.l}${t}</span>
+    </div>`;
+  }).join('');
+}
+
+let currentlyEditingKey = null;
+
+function toggleEditAgent(safeKey) {
+  const panel = document.getElementById('editpanel-'+safeKey);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { cancelEdit(safeKey); return; }
+  if (currentlyEditingKey && currentlyEditingKey !== safeKey) cancelEdit(currentlyEditingKey);
+  currentlyEditingKey = safeKey;
+
+  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) return;
+
+  const sum = document.getElementById('csummary-'+safeKey);
+  if (sum) sum.style.display = 'none';
+
+  const rows = DAYS.map(day => {
+    const c = agent.constraints[day]||{type:'none',time:''};
+    const val = c.type||'none';
+    const opts = COPTS.map(o=>`<option value="${o.v}" ${val===o.v?'selected':''}>${o.e} ${o.l}</option>`).join('');
+    let timeH = '';
+    if (val==='late')  timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="et-${safeKey}-${day}"/></div>`;
+    if (val==='early') timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="et-${safeKey}-${day}"/></div>`;
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--bg);border-radius:7px;margin-bottom:4px">
+      <span style="color:var(--muted);font-size:.78rem;min-width:58px;padding-top:6px;flex-shrink:0">יום ${day}<br><span style="font-size:.68rem">${WEEK_DATES[day].label}</span></span>
+      <div style="flex:1">
+        <select class="csel v-${val}" id="ec-${safeKey}-${day}" onchange="editSelChange('${safeKey}','${day}',this)" style="width:100%;max-width:none">${opts}</select>
+        <div id="etcell-${safeKey}-${day}">${timeH}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div style="margin-top:8px;padding:12px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:8px">
+      <div style="font-size:.78rem;color:var(--accent);font-weight:700;margin-bottom:10px">✏️ עריכת אילוצים</div>
+      ${rows}
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="cancelEdit('${safeKey}')">ביטול</button>
+        <button class="btn btn-sm btn-primary" onclick="saveEditAgent('${safeKey}')">💾 שמור</button>
+        <button class="btn btn-sm btn-success" onclick="saveAndApproveAgent('${safeKey}')">💾 שמור ואשר</button>
+      </div>
+    </div>`;
+}
+
+function editSelChange(safeKey, day, sel) {
+  sel.className = 'csel v-'+sel.value;
+  const cell = document.getElementById('etcell-'+safeKey+'-'+day);
+  if (!cell) return;
+  const v = sel.value;
+  if (v==='late')       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="et-${safeKey}-${day}"/></div>`;
+  else if (v==='early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="et-${safeKey}-${day}"/></div>`;
+  else                  cell.innerHTML = '';
+}
+
+function cancelEdit(safeKey) {
+  const panel = document.getElementById('editpanel-'+safeKey);
+  if (panel) { panel.style.display='none'; panel.innerHTML=''; }
+  const sum = document.getElementById('csummary-'+safeKey);
+  if (sum) sum.style.display = '';
+  currentlyEditingKey = null;
+}
+
+function collectEditedConstraints(safeKey) {
+  const constraints = {};
+  DAYS.forEach(day => {
+    const sel  = document.getElementById(`ec-${safeKey}-${day}`);
+    const tinp = document.getElementById(`et-${safeKey}-${day}`);
+    constraints[day] = { type: sel ? sel.value : 'none', time: tinp ? tinp.value : '' };
+  });
+  return constraints;
+}
+
+async function saveEditAgent(safeKey) {
+  showLoading('שומר...');
+  try {
+    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    if (!agent) return;
+    agent.constraints = collectEditedConstraints(safeKey);
+    agent.submitted = true;
+    await saveAgents(localAgents);
+    cancelEdit(safeKey);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function saveAndApproveAgent(safeKey) {
+  showLoading('שומר ומאשר...');
+  try {
+    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    if (!agent) return;
+    agent.constraints = collectEditedConstraints(safeKey);
+    agent.submitted = true;
+    agent.approved  = true;
+    await saveAgents(localAgents);
+    cancelEdit(safeKey);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function approveAgent(key) {
+  showLoading('מאשר ושולח מייל...');
+  try {
+    const a = localAgents.find(x=>x.key===key);
+    if (!a) return;
+    a.approved = true;
+    await saveAgents(localAgents);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+function buildScheduleText(agent, assignedShifts) {
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+  const actShift  = ACTIVITY_SHIFTS[agent.activity];
+  let lines = [];
+  DAYS.forEach(day => {
+    const c  = agent.constraints[day]||{type:'none',time:''};
+    const ms = agent.managerShift?.[day] || '';
+    const label = COPTS_MAP[c.type]||'רגיל';
+    const timeStr = c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
+    let shift = assignedShifts?.[day] || '';
+    if (!shift) {
+      if      (c.type === 'off')    shift = 'חופש';
+      else if (actShift?.single)    shift = actShift.single;
+      else if (c.type === 'early')  shift = '08:00–17:00';
+      else if (c.type === 'late')   shift = '09:00–18:00';
+      else if (ms === '8')          shift = '08:00–17:00';
+      else if (ms === '9')          shift = '09:00–18:00';
+      else                          shift = 'יקבע על ידי המנהל';
+    }
+    lines.push(`יום ${day} ${WEEK_DATES[day].label}: ${label}${timeStr} — ${shift}`);
+  });
+  return lines.join('\n');
+}
+
+// ══════════════════════════════════════════════════════════
+//  EMAILJS CONFIG
+// ══════════════════════════════════════════════════════════
+const EMAILJS_SERVICE_ID  = 'service_anrdikj';
+const EMAILJS_TEMPLATE_ID = 'template_lhgalzi';
+const EMAILJS_PUBLIC_KEY  = '1CKX5bcGsuqpOt_so';
+
+function initEmailJS() {
+  if (window.emailjs) {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }
+}
+// init on load and also after script loads
+initEmailJS();
+
+function buildScheduleHTML(agent, assignedShifts) {
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+  const actShift  = ACTIVITY_SHIFTS[agent.activity];
+  const rows = DAYS.map(day => {
+    const c  = agent.constraints[day]||{type:'none',time:''};
+    const ms = agent.managerShift?.[day] || '';
+    const label = COPTS_MAP[c.type]||'רגיל';
+    const timeStr = c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
+    let shift = assignedShifts?.[day] || '';
+    if (!shift) {
+      if      (c.type === 'off')    shift = 'חופש';
+      else if (actShift?.single)    shift = actShift.single;
+      else if (c.type === 'early')  shift = '08:00–17:00';
+      else if (c.type === 'late')   shift = '09:00–18:00';
+      else if (ms === '8')          shift = '08:00–17:00';
+      else if (ms === '9')          shift = '09:00–18:00';
+      else                          shift = 'יקבע על ידי המנהל';
+    }
+    const isOff   = shift === 'חופש';
+    const isLate  = c.type === 'late'  || shift.includes('09:00');
+    const bgColor = isOff ? '#fff3f3' : isLate ? '#f0f7ff' : '#f0fff4';
+    const bdColor = isOff ? '#ffcdd2' : isLate ? '#bbdefb' : '#c8e6c9';
+    const shiftColor = isOff ? '#c62828' : isLate ? '#1565c0' : '#2e7d32';
+    const icon = isOff ? '🏖' : isLate ? '🌤️' : '☀️';
+    return `<tr>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-weight:700;color:#444;font-size:14px;white-space:nowrap">
+        יום ${day}
+        <span style="font-weight:400;color:#999;font-size:12px;margin-right:4px">${WEEK_DATES[day].label}</span>
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;color:#666;font-size:13px">${label}${timeStr}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:left">
+        <span style="background:${bgColor};border:1px solid ${bdColor};color:${shiftColor};border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700;white-space:nowrap">
+          ${icon} ${shift}
+        </span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<table style="width:100%;border-collapse:collapse;background:#fafafa;border-radius:10px;overflow:hidden;border:1px solid #e9ecef">
+    <thead>
+      <tr style="background:#f1f3f4">
+        <th style="padding:10px 14px;text-align:right;color:#666;font-size:12px;font-weight:600;border-bottom:2px solid #e9ecef">יום</th>
+        <th style="padding:10px 14px;text-align:right;color:#666;font-size:12px;font-weight:600;border-bottom:2px solid #e9ecef">אילוץ</th>
+        <th style="padding:10px 14px;text-align:right;color:#666;font-size:12px;font-weight:600;border-bottom:2px solid #e9ecef">שעות עבודה</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+async function sendApprovalEmail(agent, assignedShifts) {
+  try {
+    if (!window.emailjs) { console.warn('EmailJS לא טעון'); return; }
+    initEmailJS();
+    const scheduleHTML = buildScheduleHTML(agent, assignedShifts||null);
+    const scheduleText = buildScheduleText(agent, assignedShifts||null);
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      {
+        to_name:       agent.fullName,
+        to_email:      agent.email,
+        email:         agent.email,
+        user_email:    agent.email,
+        schedule_html: scheduleHTML,
+        schedule_text: scheduleText,
+        activity:      agent.activity || ''
+      },
+      { publicKey: EMAILJS_PUBLIC_KEY }
+    );
+    console.log('מייל נשלח ל:', agent.email);
+  } catch(e) {
+    console.warn('שגיאה בשליחת מייל:', JSON.stringify(e));
+  }
+}
+
+async function revokeAgent(key) {
+  showLoading('מעדכן...');
+  try {
+    const a = localAgents.find(x=>x.key===key);
+    if (a) { a.approved = false; await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge(); }
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function rejectAgent(key) {
+  if (!confirm('לדחות את האילוצים של נציג זה?')) return;
+  showLoading('מעדכן...');
+  try {
+    const a = localAgents.find(x=>x.key===key);
+    if (a) {
+      a.submitted = false; a.approved = false;
+      DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
+      await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    }
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function clearScheduleForActivity(activity) {
+  if (!confirm(`למחוק את סידור העבודה של "${activity}"?\nהנציגים ישארו אבל השיבוצים יתאפסו.`)) return;
+  // אפס את managerShift הרנדומלי לנציגי הפעילות (כדי שיוכלו לשבץ מחדש)
+  let changed = false;
+  localAgents.forEach(a => {
+    if (a.activity === activity && a.managerShift) {
+      DAYS.forEach(day => {
+        const ms = a.managerShift[day] || '';
+        // מחק רק שיבוצים רנדומליים (8/9/d8/d9) — שמור בחירות מנהל מכוונות
+        // (לא ניתן להבדיל, אז מאפסים הכל — המנהל יבחר שוב)
+        if (ms === '8' || ms === '9' || ms === 'd8' || ms === 'd9') {
+          a.managerShift[day] = '';
+          changed = true;
+        }
+      });
+    }
+  });
+  if (changed) await saveAgents(localAgents).catch(()=>{});
+
+  const output = document.getElementById('scheduleOutput');
+  if (output) output.innerHTML = `<div class="empty"><div class="ico">📅</div><p>הסידור של ${activity} נמחק. לחץ "צור סידור" ליצירה מחדש.</p></div>`;
+  lastBuiltSched = null;
+  lastGeneratedFilter = null;
+}
+
+async function deleteAgentsForActivity(activity) {
+  const count = localAgents.filter(a => a.activity === activity).length;
+  if (!count) { alert('אין נציגים בפעילות זו'); return; }
+  if (!confirm(`למחוק את כל ${count} הנציגים של "${activity}"?\nפעולה זו אינה הפיכה.`)) return;
+  showLoading('מוחק...');
+  try {
+    localAgents = localAgents.filter(a => a.activity !== activity);
+    await saveAgents(localAgents);
+    mgAgentsFilter = '';
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function resetAllSubmissions() {
+  if (!confirm('האם לאפס את כל האילוצים? (לתחילת שבוע חדש)')) return;
+  showLoading('מאפס...');
+  try {
+    localAgents.forEach(a => {
+      a.submitted = false; a.approved = false;
+      DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
+    });
+    await saveAgents(localAgents);
+    lastGeneratedFilter = null;
+    renderMgSchedule();
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+// ── Edit from schedule (click on pill) ──
+function openScheduleEdit(safeKey) {
+  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) return;
+
+  const isMovement = agent.activity === 'מובמנט';
+  document.getElementById('editModalTitle').textContent = `✏️ ${agent.fullName}`;
+
+  const rows = DAYS.map(day => {
+    const c   = agent.constraints[day]||{type:'none',time:''};
+    const val = c.type||'none';
+    const opts = COPTS.map(o=>`<option value="${o.v}" ${val===o.v?'selected':''}>${o.e} ${o.l}</option>`).join('');
+    let timeH = '';
+    if (val==='late')  timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
+    if (val==='early') timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
+
+    // כפתורי שיבוץ ידני — רק מובמנט, יום רגיל
+    let shiftToggleH = '';
+    if (isMovement && val === 'none') {
+      const ms = agent.managerShift?.[day] || '';
+      shiftToggleH = `<div style="display:flex;gap:5px;margin-top:5px">
+        <span style="font-size:.72rem;color:var(--muted);padding-top:3px">משמרת:</span>
+        <button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','8')"
+          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms==='8'?'var(--green)':'var(--border)'};
+          background:${ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms==='8'?'var(--green)':'var(--muted)'};
+          font-size:.75rem;cursor:pointer;font-family:inherit">08–17</button>
+        <button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','9')"
+          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms==='9'?'var(--accent)':'var(--border)'};
+          background:${ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms==='9'?'var(--accent)':'var(--muted)'};
+          font-size:.75rem;cursor:pointer;font-family:inherit">09–18</button>
+      </div>`;
+    }
+
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--bg);border-radius:7px;margin-bottom:4px">
+      <span style="color:var(--muted);font-size:.78rem;min-width:60px;padding-top:6px;flex-shrink:0">יום ${day}<br><span style="font-size:.68rem">${WEEK_DATES[day].label}</span></span>
+      <div style="flex:1">
+        <select class="csel v-${val}" id="ms-${safeKey}-${day}"
+          onchange="modalSelChange('${safeKey}','${day}',this)" style="width:100%;max-width:none">${opts}</select>
+        <div id="mtcell-${safeKey}-${day}">${timeH}</div>
+        ${shiftToggleH}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('editModalBody').innerHTML = `
+    ${rows}
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="closeScheduleEdit()">ביטול</button>
+      <button class="btn btn-sm btn-primary" onclick="saveModalEdit('${safeKey}', false)">💾 שמור</button>
+      <button class="btn btn-sm btn-success" onclick="saveModalEdit('${safeKey}', true)">💾 שמור ואשר</button>
+    </div>`;
+
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function modalSelChange(safeKey, day, sel) {
+  sel.className = 'csel v-'+sel.value;
+  const cell = document.getElementById('mtcell-'+safeKey+'-'+day);
+  if (!cell) return;
+  const v = sel.value;
+  if (v==='late')       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="me-${safeKey}-${day}"/></div>`;
+  else if (v==='early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="me-${safeKey}-${day}"/></div>`;
+  else                  cell.innerHTML = '';
+}
+
+function modalShiftToggle(safeKey, day, shift) {
+  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) return;
+  if (!agent.managerShift) agent.managerShift = {};
+  agent.managerShift[day] = (agent.managerShift[day] === shift) ? '' : shift;
+  // update button styles live
+  const btn8 = document.getElementById(`mb8-${safeKey}-${day}`);
+  const btn9 = document.getElementById(`mb9-${safeKey}-${day}`);
+  const ms = agent.managerShift[day];
+  if (btn8) { btn8.style.borderColor = ms==='8'?'var(--green)':'var(--border)'; btn8.style.background = ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'; btn8.style.color = ms==='8'?'var(--green)':'var(--muted)'; }
+  if (btn9) { btn9.style.borderColor = ms==='9'?'var(--accent)':'var(--border)'; btn9.style.background = ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'; btn9.style.color = ms==='9'?'var(--accent)':'var(--muted)'; }
+}
+
+async function saveModalEdit(safeKey, andApprove) {
+  showLoading('שומר...');
+  try {
+    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    if (!agent) return;
+    DAYS.forEach(day => {
+      const sel  = document.getElementById(`ms-${safeKey}-${day}`);
+      const tinp = document.getElementById(`me-${safeKey}-${day}`);
+      agent.constraints[day] = { type: sel ? sel.value : 'none', time: tinp ? tinp.value : '' };
+    });
+    // managerShift is already updated live by modalShiftToggle
+    agent.submitted = true;
+    if (andApprove) agent.approved = true;
+    await saveAgents(localAgents);
+    closeScheduleEdit();
+    generateAndRender(true);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+function closeScheduleEdit() {
+  document.getElementById('editModal').style.display = 'none';
+  document.getElementById('editModalBody').innerHTML = '';
+}
+
+// ══════════════════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════════════════
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('moked_history') || '[]'); } catch(e){ return []; }
+}
+function saveHistory(arr) { localStorage.setItem('moked_history', JSON.stringify(arr.slice(-12))); } // שמור עד 12 שבועות
+
+function saveToHistory(sched, pool, actFilter) {
+  if (!actFilter) return; // שמור רק כשנבחרת פעילות ספציפית
+  const hist = loadHistory();
+  const weekKey = WEEK_DATES['ראשון'].label + '–' + WEEK_DATES['שישי'].label;
+  // הסר רשומה קיימת לאותו שבוע+פעילות
+  const filtered = hist.filter(h => !(h.week === weekKey && h.activity === actFilter));
+  filtered.push({
+    week: weekKey,
+    activity: actFilter,
+    date: new Date().toLocaleDateString('he-IL'),
+    agentCount: pool.length,
+    snapshot: DAYS.map(day => ({
+      day,
+      shift8:   sched[day].shift8.map(a=>a.name),
+      shift9:   sched[day].shift9.map(a=>a.name),
+      digital8: sched[day].digital8.map(a=>a.name),
+      digital9: sched[day].digital9.map(a=>a.name),
+      dayOff:   sched[day].dayOff.map(a=>a.name),
+    }))
+  });
+  saveHistory(filtered);
+}
+
+function renderHistory() {
+  const pane = document.getElementById('mgHistoryPane');
+  const hist = loadHistory();
+  if (!hist.length) {
+    pane.innerHTML = `<div class="empty"><div class="ico">📚</div><p>אין היסטוריה עדיין. צור סידור עבודה לפעילות ספציפית.</p></div>`;
+    return;
+  }
+  const cards = [...hist].reverse().map(h => {
+    const actC = actColor(h.activity);
+    const rows = h.snapshot.map(s => {
+      const all = [...s.shift8, ...s.shift9, ...s.digital8, ...s.digital9];
+      return `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem">
+        <span style="color:var(--muted);min-width:50px">יום ${s.day}</span>
+        <span style="color:var(--text)">${all.join(', ') || '—'}</span>
+        ${s.dayOff.length ? `<span style="color:var(--danger);margin-right:auto">🏖 ${s.dayOff.join(', ')}</span>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="card" style="border-color:${actC.border}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="background:${actC.bg};border:1px solid ${actC.border};color:${actC.text};border-radius:20px;padding:3px 12px;font-size:.82rem;font-weight:700">🏷 ${h.activity}</span>
+        <span style="color:var(--muted);font-size:.83rem">📅 ${h.week}</span>
+        <span style="color:var(--muted);font-size:.78rem">נוצר: ${h.date}</span>
+        <span style="color:var(--muted);font-size:.78rem">${h.agentCount} נציגים</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+  pane.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <h3 style="font-size:1rem;font-weight:700">📚 היסטוריית סידורים (${hist.length} שבועות)</h3>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('למחוק את כל ההיסטוריה?')){localStorage.removeItem('moked_history');renderHistory();}">🗑 נקה הכל</button>
+    </div>
+    ${cards}`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATISTICS
+// ══════════════════════════════════════════════════════════
+function renderStats() {
+  const pane  = document.getElementById('mgStatsPane');
+  const all   = localAgents;
+  if (!all.length) {
+    pane.innerHTML = `<div class="empty"><div class="ico">📊</div><p>אין נתונים עדיין</p></div>`;
+    return;
+  }
+
+  // סטטיסטיקות לפי פעילות
+  const byActivity = {};
+  ACTIVITIES.forEach(a => byActivity[a] = { total:0, submitted:0, approved:0, offDays:0, lateDays:0, earlyDays:0 });
+  all.forEach(agent => {
+    const a = agent.activity;
+    if (!byActivity[a]) return;
+    byActivity[a].total++;
+    if (agent.submitted) byActivity[a].submitted++;
+    if (agent.approved)  byActivity[a].approved++;
+    DAYS.forEach(day => {
+      const c = agent.constraints[day]||{type:'none'};
+      if (c.type==='off')   byActivity[a].offDays++;
+      if (c.type==='late')  byActivity[a].lateDays++;
+      if (c.type==='early') byActivity[a].earlyDays++;
+    });
+  });
+
+  const actCards = ACTIVITIES.map(act => {
+    const s = byActivity[act];
+    if (!s.total) return '';
+    const ac = actColor(act);
+    const submitPct = s.total ? Math.round(s.submitted/s.total*100) : 0;
+    return `<div class="card" style="border-color:${ac.border}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="background:${ac.bg};border:1px solid ${ac.border};color:${ac.text};border-radius:20px;padding:3px 12px;font-size:.82rem;font-weight:700">${act}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.83rem">
+        <div style="background:var(--s2);border-radius:7px;padding:8px 12px">👥 נציגים: <strong style="color:${ac.text}">${s.total}</strong></div>
+        <div style="background:var(--s2);border-radius:7px;padding:8px 12px">✅ הגישו: <strong style="color:var(--green)">${s.submitted}</strong></div>
+        <div style="background:var(--s2);border-radius:7px;padding:8px 12px">🏖 ימי חופש: <strong style="color:var(--danger)">${s.offDays}</strong></div>
+        <div style="background:var(--s2);border-radius:7px;padding:8px 12px">🌙 התחלות מאוחרות: <strong style="color:var(--warn)">${s.lateDays}</strong></div>
+      </div>
+      <div style="margin-top:10px;background:var(--s2);border-radius:6px;height:8px;overflow:hidden">
+        <div style="height:100%;background:${ac.hex};width:${submitPct}%;border-radius:6px;transition:width .4s"></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">${submitPct}% הגישו אילוצים</div>
+    </div>`;
+  }).join('');
+
+  // סטטיסטיקות כלליות
+  const totalAgents = all.length;
+  const submitted = all.filter(a=>a.submitted).length;
+  const approved  = all.filter(a=>a.approved).length;
+  const totalOff  = all.reduce((s,a) => s + DAYS.filter(d => a.constraints?.[d]?.type==='off').length, 0);
+
+  pane.innerHTML = `
+    <div class="stats-bar">
+      <div class="stat-chip">👥 סה"כ נציגים: <span>${totalAgents}</span></div>
+      <div class="stat-chip">📨 הגישו: <span>${submitted}</span></div>
+      <div class="stat-chip">✅ מאושרים: <span>${approved}</span></div>
+      <div class="stat-chip">🏖 סה"כ ימי חופש: <span>${totalOff}</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+      ${actCards || '<div style="color:var(--muted)">אין נתונים</div>'}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXCEL EXPORT
+// ══════════════════════════════════════════════════════════
+function exportToExcel() {
+  if (!lastBuiltSched) { alert('יש ליצור סידור עבודה תחילה'); return; }
+  const { sched, pool, actFilter } = lastBuiltSched;
+  const title = actFilter || 'כל הפעילויות';
+  const weekStr = WEEK_DATES['ראשון'].label + ' – ' + WEEK_DATES['שישי'].label;
+
+  const makeRow = (label, key) => {
+    const row = [label];
+    DAYS.forEach(day => { row.push(sched[day][key].map(a=>a.name).join(', ') || '—'); });
+    return row;
+  };
+
+  const rows = [];
+  rows.push(['סידור עבודה – ' + title]);
+  rows.push(['שבוע: ' + weekStr]);
+  rows.push([]);
+  rows.push(['משמרת', ...DAYS.map(d => 'יום ' + d + ' ' + WEEK_DATES[d].label)]);
+  rows.push(makeRow('שיחות 08-17', 'shift8'));
+  rows.push(makeRow('שיחות 09-18', 'shift9'));
+  if (actFilter === 'מובמנט') {
+    rows.push(makeRow('דיגיטל 08-17', 'digital8'));
+    rows.push(makeRow('דיגיטל 09-18', 'digital9'));
+  }
+  rows.push(makeRow('חופש', 'dayOff'));
+  rows.push([]);
+  const takanRow = ['תקנים'];
+  DAYS.forEach(d => { takanRow.push(Math.round((sched[d].takanim?.total||0)*100)/100); });
+  rows.push(takanRow);
+
+  const esc = (c) => '"' + String(c).replace(/"/g, '""') + '"';
+  const csvContent = rows.map(r => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'סידור_' + title + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function shuffleArray(arr) {
+  for (let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+}
+
+// preload html2canvas
+(function(){ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; document.head.appendChild(s); })();
+
+setRole('agent');
+</script>
+</body>
+</html>
