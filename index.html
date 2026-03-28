@@ -937,7 +937,7 @@ function buildSchedule(agentList) {
       const isDigital = (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
       const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
       const ms = agent.managerShift?.[day] || '';
-      const entry = {name:agent.fullName, activity:agent.activity, movementType:agent.movementType||null, time:c.time, constraintType:c.type};
+      const entry = {name:agent.fullName, activity:agent.activity, movementType:agent.movementType||null, time:c.time, constraintType:c.type, note:c.note||''};
 
       if (c.type === 'off') {
         dayOff.push(entry);
@@ -999,10 +999,10 @@ function renderScheduleTable(sched, total, actFilter) {
         const agentObj = localAgents.find(x => x.fullName === a.name);
         const safeKey  = agentObj ? agentObj.key.replace(/[\s']/g,'_') : '';
         const clickable = safeKey ? `onclick="openScheduleEdit('${safeKey}')" style="cursor:pointer" title="לחץ לעריכה"` : '';
-        // color pill by activity when showing all activities
         const ac = actColor(a.activity);
         const pillStyle = !actFilter && a.activity ? `style="background:${ac.bg};border:1px solid ${ac.border};color:${ac.text}"` : '';
-        return `<span class="${cls} pill-clickable" ${clickable} ${pillStyle}>${a.name}${act}${tm}</span>`;
+        const noteHtml = a.note ? ` title="💬 ${a.note}"` : '';
+        return `<span class="${cls} pill-clickable" ${clickable} ${pillStyle} ${noteHtml}>${a.name}${act}${tm}</span>`;
       }).join('')
     : `<span class="no-one">—</span>`;
 
