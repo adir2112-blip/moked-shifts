@@ -1608,6 +1608,18 @@ function openScheduleEdit(safeKey) {
       </div>`;
     }
 
+    // הערה — מוצגת אם קיימת, ניתנת לעריכה
+    const noteVal = c.note || '';
+    const showNote = (val !== 'none');
+    const noteH = showNote
+      ? `<div style="margin-top:5px">
+          ${noteVal ? `<div style="font-size:.74rem;color:var(--warn);margin-bottom:3px;padding:3px 8px;background:rgba(240,136,62,.1);border-right:3px solid var(--warn);border-radius:0 4px 4px 0">💬 סיבה נוכחית: ${noteVal}</div>` : ''}
+          <input type="text" placeholder="הערה / סיבה..." maxlength="80" value="${noteVal.replace(/"/g,'&quot;')}"
+            id="mnote-${safeKey}-${day}"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.78rem;padding:4px 8px;outline:none"/>
+         </div>`
+      : (noteVal ? `<div style="font-size:.74rem;color:var(--muted);margin-top:4px;font-style:italic">💬 ${noteVal}</div>` : '');
+
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--bg);border-radius:7px;margin-bottom:4px">
       <span style="color:var(--muted);font-size:.78rem;min-width:60px;padding-top:6px;flex-shrink:0">יום ${day}<br><span style="font-size:.68rem">${WEEK_DATES[day].label}</span></span>
       <div style="flex:1">
@@ -1615,6 +1627,7 @@ function openScheduleEdit(safeKey) {
           onchange="modalSelChange('${safeKey}','${day}',this)" style="width:100%;max-width:none">${opts}</select>
         <div id="mtcell-${safeKey}-${day}">${timeH}</div>
         ${shiftToggleH}
+        <div id="mnotecell-${safeKey}-${day}">${noteH}</div>
       </div>
     </div>`;
   }).join('');
@@ -1633,11 +1646,20 @@ function openScheduleEdit(safeKey) {
 function modalSelChange(safeKey, day, sel) {
   sel.className = 'csel v-'+sel.value;
   const cell = document.getElementById('mtcell-'+safeKey+'-'+day);
+  const noteCell = document.getElementById('mnotecell-'+safeKey+'-'+day);
   if (!cell) return;
   const v = sel.value;
   if (v==='late')       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="me-${safeKey}-${day}"/></div>`;
   else if (v==='early') cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" id="me-${safeKey}-${day}"/></div>`;
   else                  cell.innerHTML = '';
+  // הצג/הסתר שדה הערה
+  if (noteCell) {
+    if (v !== 'none') {
+      noteCell.innerHTML = `<div style="margin-top:5px"><input type="text" placeholder="הערה / סיבה..." maxlength="80" id="mnote-${safeKey}-${day}" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.78rem;padding:4px 8px;outline:none"/></div>`;
+    } else {
+      noteCell.innerHTML = '';
+    }
+  }
 }
 
 function modalShiftToggle(safeKey, day, shift) {
@@ -1659,9 +1681,15 @@ async function saveModalEdit(safeKey, andApprove) {
     const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
     if (!agent) return;
     DAYS.forEach(day => {
-      const sel  = document.getElementById(`ms-${safeKey}-${day}`);
-      const tinp = document.getElementById(`me-${safeKey}-${day}`);
-      agent.constraints[day] = { type: sel ? sel.value : 'none', time: tinp ? tinp.value : '' };
+      const sel   = document.getElementById(`ms-${safeKey}-${day}`);
+      const tinp  = document.getElementById(`me-${safeKey}-${day}`);
+      const ninp  = document.getElementById(`mnote-${safeKey}-${day}`);
+      const existingNote = agent.constraints[day]?.note || '';
+      agent.constraints[day] = {
+        type: sel ? sel.value : 'none',
+        time: tinp ? tinp.value : '',
+        note: ninp ? ninp.value.trim() : existingNote
+      };
     });
     // managerShift is already updated live by modalShiftToggle
     agent.submitted = true;
