@@ -1148,8 +1148,16 @@ async function renderMgAgents() {
     return;
   }
 
+  const pendingInActivity = mgAgentsFilter
+    ? all.filter(a => a.activity === mgAgentsFilter && a.submitted && !a.approved).length
+    : 0;
+
   const deleteAgentsBtn = mgAgentsFilter
     ? `<button class="btn btn-danger btn-sm" onclick="deleteAgentsForActivity('${mgAgentsFilter}')">🗑 מחק נציגים – ${mgAgentsFilter}</button>`
+    : '';
+
+  const clearPendingBtn = (mgAgentsFilter && pendingInActivity > 0)
+    ? `<button class="btn btn-warn btn-sm" onclick="clearPendingConstraints('${mgAgentsFilter}')">🧹 מחק אילוצים ממתינים (${pendingInActivity})</button>`
     : '';
 
   pane.innerHTML = `
@@ -1167,6 +1175,7 @@ async function renderMgAgents() {
           ${actOpts}
         </select>
         <span style="color:var(--muted);font-size:.82rem">${visible.length} מוצגים</span>
+        ${clearPendingBtn}
         ${deleteAgentsBtn}
       </div>
       <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בפעילות זו</div>`}</div>
@@ -1541,6 +1550,26 @@ async function clearScheduleForActivity(activity) {
   if (output) output.innerHTML = `<div class="empty"><div class="ico">📅</div><p>הסידור של ${activity} נמחק. לחץ "צור סידור" ליצירה מחדש.</p></div>`;
   lastBuiltSched = null;
   lastGeneratedFilter = null;
+}
+
+async function clearPendingConstraints(activity) {
+  const count = localAgents.filter(a => a.activity === activity && a.submitted && !a.approved).length;
+  if (!count) { alert('אין אילוצים ממתינים לאישור בפעילות זו'); return; }
+  if (!confirm(`למחוק את כל ${count} האילוצים הממתינים של "${activity}"?\nהנציגים ישארו אבל יצטרכו לשלוח אילוצים מחדש.`)) return;
+  showLoading('מוחק אילוצים...');
+  try {
+    localAgents.forEach(a => {
+      if (a.activity === activity && a.submitted && !a.approved) {
+        a.submitted = false;
+        a.approved  = false;
+        DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
+      }
+    });
+    await saveAgents(localAgents);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 async function deleteAgentsForActivity(activity) {
