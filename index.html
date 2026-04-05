@@ -198,6 +198,17 @@ select.filter-sel:focus{border-color:var(--accent)}
   </div>
 </div>
 
+<!-- MANUAL AGENT POPUP -->
+<div id="manualAgentModal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeManualAgentPopup()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title">
+      <span id="manualAgentTitle">➕ הוסף נציג ידני</span>
+      <button class="modal-close" onclick="closeManualAgentPopup()">✕</button>
+    </div>
+    <div id="manualAgentBody"></div>
+  </div>
+</div>
+
 <!-- AGENT SCREEN -->
 <div id="agentScreen" class="screen">
   <div class="topbar">
@@ -1089,6 +1100,7 @@ function renderScheduleTable(sched, total, actFilter) {
       <button class="btn btn-purple" onclick="downloadAsImage()">📸 הורד כתמונה</button>
       <button class="btn btn-primary" onclick="sendEmailsManually()" id="sendEmailsBtn">📧 שלח סידור לעובדים במייל</button>
       <button class="btn btn-success btn-sm" onclick="exportToExcel()">📊 ייצוא לאקסל</button>
+      ${actFilter ? `<button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border);color:var(--text)" onclick="openManualAgentPopup('${actFilter}')">➕ הוסף נציג ידני</button>` : ''}
     </div>`;
 }
 
@@ -1160,6 +1172,10 @@ async function renderMgAgents() {
     ? `<button class="btn btn-warn btn-sm" onclick="clearPendingConstraints('${mgAgentsFilter}')">🧹 מחק אילוצים ממתינים (${pendingInActivity})</button>`
     : '';
 
+  const addManualBtn = mgAgentsFilter
+    ? `<button class="btn btn-primary btn-sm" onclick="openAddManualAgent('${mgAgentsFilter}')">➕ הוסף נציג ידני</button>`
+    : '';
+
   pane.innerHTML = `
     <div class="stats-bar">
       <div class="stat-chip">סה"כ נציגים: <span>${all.length}</span></div>
@@ -1175,9 +1191,11 @@ async function renderMgAgents() {
           ${actOpts}
         </select>
         <span style="color:var(--muted);font-size:.82rem">${visible.length} מוצגים</span>
+        ${addManualBtn}
         ${clearPendingBtn}
         ${deleteAgentsBtn}
       </div>
+      <div id="manualAgentForm"></div>
       <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בפעילות זו</div>`}</div>
     </div>`;
 }
@@ -1552,6 +1570,248 @@ async function clearScheduleForActivity(activity) {
   lastGeneratedFilter = null;
 }
 
+function openManualAgentPopup(activity) {
+  const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
+  const shiftLabel = ACTIVITY_SHIFTS[activity]?.single || '';
+  const isMovement = activity === 'מובמנט';
+
+  document.getElementById('manualAgentTitle').textContent = `➕ הוסף נציג ידני — ${activity}`;
+
+  const dayRows = DAYS.map(day => {
+    if (isSingle) {
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <span style="color:var(--muted);font-size:.8rem;min-width:75px;flex-shrink:0">יום ${day} <span style="font-size:.7rem">${WEEK_DATES[day].label}</span></span>
+        <select id="mpop-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
+          <option value="auto">אוטומטי — ${shiftLabel}</option>
+          <option value="off">🏖 חופש</option>
+        </select>
+      </div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="color:var(--muted);font-size:.8rem;min-width:75px;flex-shrink:0">יום ${day} <span style="font-size:.7rem">${WEEK_DATES[day].label}</span></span>
+      <select id="mpop-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
+        <option value="auto">אוטומטי (08–17 או 09–18)</option>
+        <option value="8">☀️ 08:00–17:00</option>
+        <option value="9">🌤 09:00–18:00</option>
+        <option value="off">🏖 חופש</option>
+      </select>
+    </div>`;
+  }).join('');
+
+  const movementField = isMovement ? `
+    <div style="margin-bottom:12px">
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">סוג נציג</label>
+      <select id="mpop-mvtype" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%">
+        <option value="שיחות">📞 שיחות</option>
+        <option value="דיגיטל">💻 דיגיטל</option>
+      </select>
+    </div>` : '';
+
+  document.getElementById('manualAgentBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם פרטי *</label>
+        <input id="mpop-first" placeholder="ישראל" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם משפחה *</label>
+        <input id="mpop-last" placeholder="ישראלי" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+      </div>
+    </div>
+    ${movementField}
+    <div style="margin-bottom:14px">
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:8px">שיבוץ לכל יום <span style="color:var(--muted);font-weight:400">(אוטומטי = משובץ רנדומלי)</span></label>
+      ${dayRows}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="closeManualAgentPopup()">ביטול</button>
+      <button class="btn btn-sm btn-success" onclick="saveManualAgentFromPopup('${activity}')">✅ הוסף לסידור</button>
+    </div>`;
+
+  document.getElementById('manualAgentModal').style.display = 'flex';
+}
+
+function closeManualAgentPopup() {
+  document.getElementById('manualAgentModal').style.display = 'none';
+  document.getElementById('manualAgentBody').innerHTML = '';
+}
+
+async function saveManualAgentFromPopup(activity) {
+  const fn = document.getElementById('mpop-first')?.value.trim();
+  const ln = document.getElementById('mpop-last')?.value.trim();
+  if (!fn || !ln) { alert('יש להזין שם פרטי ושם משפחה'); return; }
+
+  const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
+  const isMovement = activity === 'מובמנט';
+  const mvtype     = isMovement ? (document.getElementById('mpop-mvtype')?.value || 'שיחות') : null;
+
+  const constraints  = {};
+  const managerShift = {};
+
+  DAYS.forEach(day => {
+    const val = document.getElementById('mpop-'+day)?.value || 'auto';
+    if (val === 'off') {
+      constraints[day]  = {type:'off', time:'', note:''};
+    } else if (val === '8') {
+      constraints[day]  = {type:'none', time:'', note:''};
+      managerShift[day] = '8';
+    } else if (val === '9') {
+      constraints[day]  = {type:'none', time:'', note:''};
+      managerShift[day] = '9';
+    } else {
+      // auto — יוגרל אוטומטית ב-buildSchedule
+      constraints[day]  = {type:'none', time:'', note:''};
+      managerShift[day] = '';
+    }
+  });
+
+  const key   = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
+  const agent = {
+    key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln,
+    activity, movementType:mvtype, phone:'', email:'',
+    submitted:true, approved:true, constraints, managerShift
+  };
+
+  showLoading('מוסיף נציג...');
+  try {
+    localAgents.push(agent);
+    await saveAgents(localAgents);
+    closeManualAgentPopup();
+    // רענן סידור
+    if (lastGeneratedFilter === activity || lastGeneratedFilter === '') {
+      generateAndRender(true);
+    }
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+function openAddManualAgent(activity) {
+  const form = document.getElementById('manualAgentForm');
+  if (!form) return;
+  const isMovement = activity === 'מובמנט';
+  const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
+  const shiftLabel = ACTIVITY_SHIFTS[activity]?.single || '';
+
+  // בנה שורת שיבוץ לכל יום
+  const dayRows = DAYS.map(day => {
+    if (isSingle) {
+      // פעילות עם שורה אחת — רק חופש / עובד
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <span style="color:var(--muted);font-size:.8rem;min-width:70px">יום ${day}</span>
+        <select id="man-shift-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
+          <option value="work">עובד — ${shiftLabel}</option>
+          <option value="off">🏖 חופש</option>
+        </select>
+      </div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="color:var(--muted);font-size:.8rem;min-width:70px">יום ${day}</span>
+      <select id="man-shift-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
+        <option value="8">☀️ 08:00–17:00</option>
+        <option value="9">🌤 09:00–18:00</option>
+        <option value="off">🏖 חופש</option>
+      </select>
+    </div>`;
+  }).join('');
+
+  const movementTypeField = isMovement ? `
+    <div style="margin-bottom:10px">
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">סוג נציג</label>
+      <select id="man-mvtype" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%">
+        <option value="שיחות">📞 שיחות</option>
+        <option value="דיגיטל">💻 דיגיטל</option>
+      </select>
+    </div>` : '';
+
+  form.innerHTML = `
+    <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:16px;margin-bottom:18px">
+      <div style="font-size:.9rem;font-weight:700;color:var(--accent);margin-bottom:14px">➕ הוספת נציג ידני — ${activity}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם פרטי</label>
+          <input id="man-first" placeholder="ישראל" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם משפחה</label>
+          <input id="man-last" placeholder="ישראלי" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+      </div>
+      ${movementTypeField}
+      <div style="margin-bottom:12px">
+        <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:8px">שיבוץ לכל יום:</label>
+        ${dayRows}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('manualAgentForm').innerHTML=''">ביטול</button>
+        <button class="btn btn-sm btn-success" onclick="saveManualAgent('${activity}')">✅ הוסף לסידור</button>
+      </div>
+    </div>`;
+}
+
+async function saveManualAgent(activity) {
+  const fn = document.getElementById('man-first')?.value.trim();
+  const ln = document.getElementById('man-last')?.value.trim();
+  if (!fn || !ln) { alert('יש להזין שם פרטי ושם משפחה'); return; }
+
+  const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
+  const isMovement = activity === 'מובמנט';
+  const mvtype     = isMovement ? (document.getElementById('man-mvtype')?.value || 'שיחות') : null;
+
+  // בנה אילוצים לפי הבחירות
+  const constraints = {};
+  DAYS.forEach(day => {
+    const sel = document.getElementById('man-shift-'+day);
+    const val = sel ? sel.value : 'work';
+    if (val === 'off') {
+      constraints[day] = {type:'off', time:'', note:''};
+    } else if (val === '8') {
+      constraints[day] = {type:'early', time:'', note:''};
+    } else if (val === '9') {
+      constraints[day] = {type:'late', time:'', note:''};
+    } else {
+      constraints[day] = {type:'none', time:'', note:''};
+    }
+  });
+
+  // צור מפתח ייחודי
+  const key = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
+  const agent = {
+    key,
+    fullName: `${fn} ${ln}`,
+    firstName: fn,
+    lastName:  ln,
+    activity,
+    movementType: mvtype,
+    phone: '',
+    email: '',
+    submitted: true,
+    approved:  true,
+    constraints,
+    managerShift: {}
+  };
+
+  // הגדר managerShift לפי הבחירות
+  DAYS.forEach(day => {
+    const sel = document.getElementById('man-shift-'+day);
+    const val = sel ? sel.value : 'work';
+    if (val === '8') agent.managerShift[day] = '8';
+    if (val === '9') agent.managerShift[day] = '9';
+  });
+
+  showLoading('מוסיף נציג...');
+  try {
+    localAgents.push(agent);
+    await saveAgents(localAgents);
+    document.getElementById('manualAgentForm').innerHTML = '';
+    await renderMgAgents();
+    updatePendingBadge();
+    // עדכן סידור אם פתוח
+    if (lastGeneratedFilter === activity) generateAndRender(true);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 async function clearPendingConstraints(activity) {
   const count = localAgents.filter(a => a.activity === activity && a.submitted && !a.approved).length;
   if (!count) { alert('אין אילוצים ממתינים לאישור בפעילות זו'); return; }
@@ -1663,10 +1923,13 @@ function openScheduleEdit(safeKey) {
 
   document.getElementById('editModalBody').innerHTML = `
     ${rows}
-    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap">
-      <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="closeScheduleEdit()">ביטול</button>
-      <button class="btn btn-sm btn-primary" onclick="saveModalEdit('${safeKey}', false)">💾 שמור</button>
-      <button class="btn btn-sm btn-success" onclick="saveModalEdit('${safeKey}', true)">💾 שמור ואשר</button>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:space-between;flex-wrap:wrap">
+      <button class="btn btn-sm btn-danger" onclick="removeAgentFromSchedule('${safeKey}')">🗑 הסר מהסידור</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="closeScheduleEdit()">ביטול</button>
+        <button class="btn btn-sm btn-primary" onclick="saveModalEdit('${safeKey}', false)">💾 שמור</button>
+        <button class="btn btn-sm btn-success" onclick="saveModalEdit('${safeKey}', true)">💾 שמור ואשר</button>
+      </div>
     </div>`;
 
   document.getElementById('editModal').style.display = 'flex';
@@ -1727,6 +1990,23 @@ async function saveModalEdit(safeKey, andApprove) {
     closeScheduleEdit();
     generateAndRender(true);
     await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function removeAgentFromSchedule(safeKey) {
+  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) return;
+  if (!confirm(`להסיר את ${agent.fullName} מהסידור?\nהנציג יסומן כלא מאושר ולא יופיע בסידור.`)) return;
+  showLoading('מסיר...');
+  try {
+    agent.approved  = false;
+    agent.submitted = false;
+    DAYS.forEach(d => agent.constraints[d] = {type:'none', time:'', note:''});
+    await saveAgents(localAgents);
+    closeScheduleEdit();
+    generateAndRender(true);
     updatePendingBadge();
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
