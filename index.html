@@ -388,6 +388,7 @@ async function getOrCreateAgent(fn, ln, activity) {
     agent = { key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln, phone: currentUser?.phone||'', activity,
               movementType: currentUser ? (currentUser.movementType || null) : null,
               email: currentUser ? (currentUser.email || '') : '',
+              joinDate: new Date().toLocaleDateString('he-IL'),
               submitted:false, approved:false, constraints };
     localAgents.push(agent);
     await saveAgents(localAgents);
@@ -512,14 +513,33 @@ function renderUsersTab() {
     const sourceIcon  = u._source === 'local' ? '💾' : '☁️';
     const pctBadge    = u.jobPct && u.jobPct !== 100 ? `<span style="background:rgba(240,136,62,.15);color:var(--warn);border-radius:10px;padding:1px 7px;font-size:.72rem;margin-right:4px">${u.jobPct}%</span>` : '';
     const notesIcon   = u.managerNotes ? `<span title="${u.managerNotes}" style="cursor:help">📝</span>` : '';
+    // ממוצע תקנים שבועי
+    const hist = u.constraintHistory || [];
+    let avgTakanim = '—';
+    if (hist.length) {
+      const FULL = 8.5;
+      const totals = hist.map(h => {
+        return DAYS.reduce((s, day) => {
+          const c = h.constraints?.[day] || {type:'none',time:''};
+          if (c.type === 'off') return s;
+          if (c.type === 'early' && c.time) { const [hh,mm]=c.time.split(':').map(Number); return s + Math.max(0,(hh+mm/60)-8)/FULL; }
+          if (c.type === 'late'  && c.time) { const [hh,mm]=c.time.split(':').map(Number); return s + Math.max(0,18-(hh+mm/60))/FULL; }
+          return s + 1;
+        }, 0);
+      });
+      const avg = totals.reduce((a,b)=>a+b,0)/totals.length;
+      avgTakanim = Math.round(avg*10)/10;
+    }
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:10px 12px;font-weight:600">${u.fullName||'—'} <span style="font-size:.7rem;color:var(--muted)">${sourceIcon}</span> ${notesIcon}</td>
       <td style="padding:10px 8px;font-size:.82rem;color:var(--muted)">${u.phone||'—'}</td>
       <td style="padding:10px 8px">${pctBadge}<span style="background:${ac.bg};border:1px solid ${ac.border};color:${ac.text};border-radius:12px;padding:2px 8px;font-size:.75rem">${u.allowedActivity||u.activity||'—'}</span></td>
-      <td style="padding:10px 8px;font-size:.82rem;color:var(--muted)">${u.empType||'קבוע'}</td>
+      <td style="padding:10px 8px;font-size:.82rem;color:var(--muted)">${u.joinDate||'—'}</td>
+      <td style="padding:10px 8px;font-size:.82rem;color:var(--accent);font-weight:700">${avgTakanim}</td>
       <td style="padding:10px 8px;font-size:.82rem;color:${statusColor}">${statusLabel}</td>
-      <td style="padding:10px 8px">
-        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted);font-size:.75rem" onclick="openEditUser('${safeKey}','${u.phone||''}')">✏️ ערוך</button>
+      <td style="padding:10px 8px;display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted);font-size:.75rem" onclick="openEditUser('${safeKey}','${u.phone||''}')">✏️</button>
+        ${hist.length ? `<button class="btn btn-sm" style="background:rgba(88,166,255,.1);color:var(--accent);font-size:.75rem" onclick="openUserHistory('${safeKey}')">📋</button>` : ''}
         <button class="btn btn-sm btn-danger" style="font-size:.75rem" onclick="deleteUser('${safeKey}','${u.phone||''}')">🗑</button>
       </td>
     </tr>`;
@@ -532,9 +552,10 @@ function renderUsersTab() {
         <input placeholder="🔍 חיפוש לפי שם / טלפון / מייל..." value="${userSearch}"
           oninput="userSearch=this.value;renderUsersTab()"
           style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;flex:1;min-width:200px"/>
+        <button class="btn btn-primary btn-sm" onclick="openAddAgentByManager()">➕ הוסף נציג</button>
         <span style="color:var(--muted);font-size:.82rem">${users.length} משתמשים</span>
       </div>
-      <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">☁️ = שמור בענן &nbsp;|&nbsp; 💾 = שמור מקומית (טרם התחבר מהמכשיר הזה)</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">☁️ = ענן &nbsp;|&nbsp; 💾 = מקומי &nbsp;|&nbsp; 📋 = היסטוריה</p>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:.85rem">
           <thead>
@@ -542,16 +563,147 @@ function renderUsersTab() {
               <th style="padding:8px 12px;color:var(--muted);font-weight:600">שם</th>
               <th style="padding:8px 8px;color:var(--muted);font-weight:600">טלפון</th>
               <th style="padding:8px 8px;color:var(--muted);font-weight:600">מחלקה</th>
-              <th style="padding:8px 8px;color:var(--muted);font-weight:600">סוג</th>
+              <th style="padding:8px 8px;color:var(--muted);font-weight:600">הצטרף</th>
+              <th style="padding:8px 8px;color:var(--muted);font-weight:600">תקנים ממוצע</th>
               <th style="padding:8px 8px;color:var(--muted);font-weight:600">סטטוס</th>
               <th style="padding:8px 8px;color:var(--muted);font-weight:600">פעולות</th>
             </tr>
           </thead>
-          <tbody>${rows || `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted)">לא נמצאו משתמשים</td></tr>`}</tbody>
+          <tbody>${rows || `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted)">לא נמצאו משתמשים</td></tr>`}</tbody>
         </table>
       </div>
     </div>
+    <div id="addAgentPanel"></div>
+    <div id="userHistoryPanel"></div>
     <div id="editUserPanel"></div>`;
+}
+
+function openUserHistory(safeKey) {
+  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) return;
+  const hist = agent.constraintHistory || [];
+  const panel = document.getElementById('userHistoryPanel');
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+
+  if (!hist.length) {
+    panel.innerHTML = `<div class="card" style="border-color:rgba(88,166,255,.2)"><p style="color:var(--muted)">אין היסטוריה עדיין ל-${agent.fullName}</p></div>`;
+    panel.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
+  const cards = [...hist].reverse().map(h => {
+    const rows = DAYS.map(day => {
+      const c = h.constraints?.[day] || {type:'none'};
+      const label = COPTS_MAP[c.type]||'רגיל';
+      const color = c.type==='off' ? 'var(--danger)' : c.type==='late' ? 'var(--warn)' : c.type==='early' ? 'var(--green)' : 'var(--muted)';
+      const timeStr = c.time ? ` (${c.time})` : '';
+      return `<span style="display:inline-block;background:var(--s2);border-radius:6px;padding:2px 8px;font-size:.75rem;margin:2px;color:${color}">יום ${day}: ${label}${timeStr}</span>`;
+    }).join('');
+    return `<div style="padding:10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:.8rem;color:var(--accent);font-weight:700;margin-bottom:6px">📅 ${h.week} <span style="color:var(--muted);font-weight:400">(${h.date})</span></div>
+      <div>${rows}</div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="card" style="border-color:rgba(88,166,255,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin:0">📋 היסטוריית אילוצים — ${agent.fullName}</div>
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('userHistoryPanel').innerHTML=''">✕ סגור</button>
+      </div>
+      ${cards}
+    </div>`;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+function openAddAgentByManager() {
+  const panel = document.getElementById('addAgentPanel');
+  const actOpts = ACTIVITIES.map(a => `<option value="${a}">${a}</option>`).join('');
+  panel.innerHTML = `
+    <div class="card" style="border-color:rgba(63,185,80,.3)">
+      <div class="card-title" style="color:var(--green)">➕ הוספת נציג חדש</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">שם פרטי *</label>
+          <input id="na-first" placeholder="ישראל" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">שם משפחה *</label>
+          <input id="na-last" placeholder="ישראלי" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">טלפון *</label>
+          <input id="na-phone" placeholder="0501234567" type="tel" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">מייל</label>
+          <input id="na-email" placeholder="israel@example.com" type="email" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">מחלקה *</label>
+          <select id="na-activity" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%">
+            <option value="">-- בחר --</option>${actOpts}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">סוג (מובמנט)</label>
+          <select id="na-mvtype" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%">
+            <option value="שיחות">📞 שיחות</option>
+            <option value="דיגיטל">💻 דיגיטל</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('addAgentPanel').innerHTML=''">ביטול</button>
+        <button class="btn btn-sm btn-success" onclick="saveNewAgentByManager()">✅ הוסף נציג</button>
+      </div>
+    </div>`;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+async function saveNewAgentByManager() {
+  const fn       = document.getElementById('na-first')?.value.trim();
+  const ln       = document.getElementById('na-last')?.value.trim();
+  const phone    = document.getElementById('na-phone')?.value.replace(/[^0-9]/g,'');
+  const email    = document.getElementById('na-email')?.value.trim();
+  const activity = document.getElementById('na-activity')?.value;
+  const mvtype   = document.getElementById('na-mvtype')?.value;
+
+  if (!fn || !ln)    { alert('יש להזין שם פרטי ושם משפחה'); return; }
+  if (!phone)        { alert('יש להזין מספר טלפון'); return; }
+  if (!activity)     { alert('יש לבחור מחלקה'); return; }
+
+  // בדוק שהטלפון לא קיים כבר
+  if (localAgents.find(a => a.phone === phone)) { alert('נציג עם טלפון זה כבר קיים!'); return; }
+
+  const key = `phone_${phone}`;
+  const constraints = {};
+  DAYS.forEach(d => constraints[d] = {type:'none', time:'', note:''});
+  const agent = {
+    key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln,
+    phone, email, activity, movementType:mvtype,
+    joinDate: new Date().toLocaleDateString('he-IL'),
+    submitted:false, approved:false, constraints,
+    managerShift:{}, constraintHistory:[]
+  };
+
+  showLoading('מוסיף נציג...');
+  try {
+    localAgents.push(agent);
+    await saveAgents(localAgents);
+    // שמור גם ב-localStorage
+    try {
+      const users = JSON.parse(localStorage.getItem('moked_users')||'{}');
+      users[phone] = { firstName:fn, lastName:ln, activity, movementType:mvtype, email, phone, joinDate:agent.joinDate, updatedAt:Date.now() };
+      localStorage.setItem('moked_users', JSON.stringify(users));
+    } catch(e){}
+    document.getElementById('addAgentPanel').innerHTML = '';
+    renderUsersTab();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 function openEditUser(safeKey, phone) {
@@ -1010,6 +1162,15 @@ async function agentConfirmAndSubmit() {
       };
     });
     agent.submitted = true;
+    // שמור היסטוריית אילוץ
+    if (!agent.constraintHistory) agent.constraintHistory = [];
+    agent.constraintHistory.push({
+      week: WEEK_DATES['ראשון'].label + '–' + WEEK_DATES['שישי'].label,
+      date: new Date().toLocaleDateString('he-IL'),
+      constraints: JSON.parse(JSON.stringify(agent.constraints))
+    });
+    // שמור רק 12 שבועות אחרונים
+    if (agent.constraintHistory.length > 12) agent.constraintHistory = agent.constraintHistory.slice(-12);
     await updateAgent(agent);
     agentDraft = {};
     await renderAgentContent();
