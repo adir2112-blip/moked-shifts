@@ -275,7 +275,7 @@ const COPTS = [
 // שעות עבודה קבועות לכל פעילות
 // מובמנט: שיחות = 08–17 / 09–18, דיגיטל = 08–17 / 09–18 (כמו קודם)
 const ACTIVITY_SHIFTS = {
-  'מאוחדת':           { single: '09:00–16:30' },
+  'מאוחדת':           { single: '09:00–16:30', hasDigital: true },
   'פריפיט שירות':     { single: '08:00–17:00' },
   'פריפיט מכירות':    { single: '09:00–18:00' },
   'מחלקת סחר':        { single: '08:00–17:00' },
@@ -378,9 +378,10 @@ function agentKey(fn, ln, phone) {
 }
 
 async function getOrCreateAgent(fn, ln, activity) {
-  const arr = await loadAgents();
+  // השתמש ב-cache — אל תטען מהרשת בכל פעם
+  if (!localAgents.length) await loadAgents();
   const key = agentKey(fn, ln, currentUser?.phone || '');
-  let agent = arr.find(a => a.key === key);
+  let agent = localAgents.find(a => a.key === key);
   if (!agent) {
     const constraints = {};
     DAYS.forEach(d => constraints[d] = {type:'none', time:''});
@@ -388,33 +389,29 @@ async function getOrCreateAgent(fn, ln, activity) {
               movementType: currentUser ? (currentUser.movementType || null) : null,
               email: currentUser ? (currentUser.email || '') : '',
               submitted:false, approved:false, constraints };
-    arr.push(agent);
-    await saveAgents(arr);
+    localAgents.push(agent);
+    await saveAgents(localAgents);
   } else {
-    // always sync movementType and activity in case they changed
     let changed = false;
     if (currentUser && currentUser.movementType !== undefined && agent.movementType !== currentUser.movementType) {
-      agent.movementType = currentUser.movementType || null;
-      changed = true;
+      agent.movementType = currentUser.movementType || null; changed = true;
     }
     if (currentUser && activity && agent.activity !== activity) {
-      agent.activity = activity;
-      changed = true;
+      agent.activity = activity; changed = true;
     }
     if (currentUser && currentUser.email && agent.email !== currentUser.email) {
-      agent.email = currentUser.email;
-      changed = true;
+      agent.email = currentUser.email; changed = true;
     }
-    if (changed) await saveAgents(arr);
+    if (changed) await saveAgents(localAgents);
   }
   return agent;
 }
 
 async function updateAgent(updated) {
-  const arr = await loadAgents();
-  const idx = arr.findIndex(a => a.key === updated.key);
-  if (idx >= 0) arr[idx] = updated; else arr.push(updated);
-  await saveAgents(arr);
+  // עדכן cache בלבד — אין טעינה מהרשת
+  const idx = localAgents.findIndex(a => a.key === updated.key);
+  if (idx >= 0) localAgents[idx] = updated; else localAgents.push(updated);
+  await saveAgents(localAgents);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1189,7 +1186,7 @@ function buildSchedule(agentList) {
   // כך שכל לחיצה חוזרת על "צור סידור" לא תשנה את השיבוץ
   let needsSave = false;
   agentList.forEach(agent => {
-    const isDigital = (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
+    const isDigital = (agent.movementType === 'דיגיטל' && (agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital));
     const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
     if (!isDigital && !isSingle) {
       DAYS.forEach(day => {
@@ -1230,11 +1227,17 @@ function buildSchedule(agentList) {
 
       if (c.type === 'off') {
         dayOff.push(entry);
-      } else if (isDigital) {
-        if      (c.type === 'early') digital8.push(entry);
-        else if (c.type === 'late')  digital9.push(entry);
-        else if (ms === 'd8')        digital8.push(entry);
-        else                         digital9.push(entry);
+      } else if (isDigital || (agent.activity === 'מאוחדת' && agent.movementType === 'דיגיטל')) {
+        // מובמנט דיגיטל — שתי שורות | מאוחדת דיגיטל — שורה אחת (08-17)
+        const isMauchdetDig = (agent.activity === 'מאוחדת' && agent.movementType === 'דיגיטל');
+        if (isMauchdetDig) {
+          if (c.type === 'off') dayOff.push(entry); else digital8.push(entry);
+        } else {
+          if      (c.type === 'early') digital8.push(entry);
+          else if (c.type === 'late')  digital9.push(entry);
+          else if (ms === 'd8')        digital8.push(entry);
+          else                         digital9.push(entry);
+        }
       } else if (isSingle) {
         shift8.push(entry);
       } else {
@@ -1273,6 +1276,7 @@ function buildSchedule(agentList) {
 function renderScheduleTable(sched, total, actFilter) {
   const title = actFilter ? `סידור עבודה – ${actFilter}` : 'סידור עבודה – כל הפעילויות';
   const isMovement = actFilter === 'מובמנט';
+  const hasDigital  = isMovement || ACTIVITY_SHIFTS[actFilter]?.hasDigital;
   const actShift = ACTIVITY_SHIFTS[actFilter];
   const isSingle = actShift?.single; // פעילות עם שורה אחת
 
@@ -1311,17 +1315,23 @@ function renderScheduleTable(sched, total, actFilter) {
 
   // שורות דיגיטל — רק למובמנט
   let digitalRows = '', digitalStats = '';
-  if (isMovement) {
+  if (hasDigital) {
     const rowD8 = DAYS.map(d => `<td class="sch-td td-d8">${pills(sched[d].digital8,'pd8')}</td>`).join('');
-    const rowD9 = DAYS.map(d => `<td class="sch-td td-d9">${pills(sched[d].digital9,'pd9')}</td>`).join('');
     const tD8 = DAYS.reduce((s,d)=>s+sched[d].digital8.length,0);
-    const tD9 = DAYS.reduce((s,d)=>s+sched[d].digital9.length,0);
-    digitalRows = `
-      <tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>08:00<br>–<br>17:00</td>${rowD8}</tr>
-      <tr><td class="sch-row-label lbl-d9">💻<br>דיגיטל<br>09:00<br>–<br>18:00</td>${rowD9}</tr>`;
-    digitalStats = `
-      <div class="stat-chip">💻 דיגיטל 08–17: <span>${tD8}</span></div>
-      <div class="stat-chip">💻 דיגיטל 09–18: <span>${tD9}</span></div>`;
+    // מאוחדת — שורה אחת בלבד; מובמנט — שתי שורות
+    if (isMovement) {
+      const rowD9 = DAYS.map(d => `<td class="sch-td td-d9">${pills(sched[d].digital9,'pd9')}</td>`).join('');
+      const tD9 = DAYS.reduce((s,d)=>s+sched[d].digital9.length,0);
+      digitalRows = `
+        <tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>08:00<br>–<br>17:00</td>${rowD8}</tr>
+        <tr><td class="sch-row-label lbl-d9">💻<br>דיגיטל<br>09:00<br>–<br>18:00</td>${rowD9}</tr>`;
+      digitalStats = `
+        <div class="stat-chip">💻 דיגיטל 08–17: <span>${tD8}</span></div>
+        <div class="stat-chip">💻 דיגיטל 09–18: <span>${tD9}</span></div>`;
+    } else {
+      digitalRows = `<tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>09:00<br>–<br>16:30</td>${rowD8}</tr>`;
+      digitalStats = `<div class="stat-chip">💻 דיגיטל: <span>${tD8}</span></div>`;
+    }
   }
 
   // שורת תקנים
@@ -1497,7 +1507,7 @@ async function renderMgAgents() {
 function buildAgentCard(agent) {
   const sub = agent.submitted, appr = agent.approved;
   const safeKey = agent.key.replace(/[\s']/g,'_');
-  const isMovement = agent.activity === 'מובמנט';
+  const isMovement = agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital;
   const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--accent2)'};
   const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
 
