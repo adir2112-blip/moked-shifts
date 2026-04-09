@@ -800,6 +800,7 @@ function updatePendingBadge() {
 let lastGeneratedFilter = null;
 let lastBuiltSched = null;
 let mgAgentsFilter = '';
+let mgStatusFilter = ''; // '' | 'pending' | 'approved' | 'rejected'
 
 function mgTab(pane, btn) {
   document.querySelectorAll('#managerScreen .tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1141,6 +1142,9 @@ function downloadAsImage() {
 
 // ── Agents Tab ──
 async function renderMgAgents() {
+  // אל תרנדר אם טופס הנציג הידני פתוח
+  const manForm = document.getElementById('manualAgentForm');
+  if (manForm && manForm.innerHTML.trim()) return;
   const pane = document.getElementById('mgAgentsPane');
   const existingFilter = document.getElementById('agentActFilter');
   if (existingFilter) mgAgentsFilter = existingFilter.value;
@@ -1152,7 +1156,11 @@ async function renderMgAgents() {
   const actOpts = ['', ...ACTIVITIES].map(a =>
     `<option value="${a}" ${a===mgAgentsFilter?'selected':''}>${a||'-- כל הפעילויות --'}</option>`
   ).join('');
-  const visible = mgAgentsFilter ? all.filter(a=>a.activity===mgAgentsFilter) : all;
+  let visible = mgAgentsFilter ? all.filter(a=>a.activity===mgAgentsFilter) : all;
+  // סינון לפי סטטוס
+  if (mgStatusFilter === 'pending')  visible = visible.filter(a => a.submitted && !a.approved);
+  if (mgStatusFilter === 'approved') visible = visible.filter(a => a.approved);
+  if (mgStatusFilter === 'rejected') visible = visible.filter(a => !a.submitted && !a.approved);
   const cards = visible.map(agent => buildAgentCard(agent)).join('');
 
   if (!all.length) {
@@ -1176,6 +1184,13 @@ async function renderMgAgents() {
     ? `<button class="btn btn-primary btn-sm" onclick="openAddManualAgent('${mgAgentsFilter}')">➕ הוסף נציג ידני</button>`
     : '';
 
+  const statusFilters = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${[['','הכל'],['pending','⏳ ממתינים'],['approved','✅ אושרו'],['rejected','✖ נדחו']].map(([v,l]) =>
+        `<button onclick="mgStatusFilter='${v}';renderMgAgents()" style="padding:4px 10px;border-radius:6px;border:1px solid ${mgStatusFilter===v?'var(--accent)':'var(--border)'};background:${mgStatusFilter===v?'rgba(88,166,255,.15)':'var(--s2)'};color:${mgStatusFilter===v?'var(--accent)':'var(--muted)'};font-size:.78rem;cursor:pointer;font-family:inherit">${l}</button>`
+      ).join('')}
+    </div>`;
+
   pane.innerHTML = `
     <div class="stats-bar">
       <div class="stat-chip">סה"כ נציגים: <span>${all.length}</span></div>
@@ -1184,10 +1199,10 @@ async function renderMgAgents() {
       <div class="stat-chip">מאושרים: <span>${approved}</span></div>
     </div>
     <div class="card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div class="card-title" style="margin:0">👥 נציגים ואישורים</div>
         <select class="filter-sel" id="agentActFilter" style="min-width:180px;max-width:240px"
-          onchange="mgAgentsFilter=this.value; renderMgAgents()">
+          onchange="mgAgentsFilter=this.value; mgStatusFilter=''; renderMgAgents()">
           ${actOpts}
         </select>
         <span style="color:var(--muted);font-size:.82rem">${visible.length} מוצגים</span>
@@ -1195,8 +1210,10 @@ async function renderMgAgents() {
         ${clearPendingBtn}
         ${deleteAgentsBtn}
       </div>
+      ${statusFilters}
+      <div style="margin-top:14px"></div>
       <div id="manualAgentForm"></div>
-      <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בפעילות זו</div>`}</div>
+      <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בסטטוס זה</div>`}</div>
     </div>`;
 }
 
@@ -1244,12 +1261,14 @@ function buildAgentCard(agent) {
     actionBtns = `<div class="approve-btns" style="margin-top:8px">
       <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="toggleEditAgent('${safeKey}')">✏️ ערוך</button>
       <button class="btn btn-sm btn-warn" onclick="revokeAgent('${agent.key}')">בטל אישור</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteAgentConstraint('${agent.key}')">🗑 מחק אילוץ</button>
     </div>`;
   } else if (sub && !appr) {
     actionBtns = `<div class="approve-btns" style="margin-top:8px">
       <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="toggleEditAgent('${safeKey}')">✏️ ערוך</button>
       <button class="btn btn-sm btn-success" onclick="approveAgent('${agent.key}')">✔ אשר</button>
       <button class="btn btn-sm btn-danger"  onclick="rejectAgent('${agent.key}')">✖ דחה</button>
+      <button class="btn btn-sm" style="background:rgba(255,123,114,.1);color:var(--danger);border:1px solid rgba(255,123,114,.3)" onclick="deleteAgentConstraint('${agent.key}')">🗑 מחק אילוץ</button>
     </div>`;
   }
 
@@ -1262,6 +1281,22 @@ function buildAgentCard(agent) {
     <div id="editpanel-${safeKey}" style="display:none"></div>
     ${actionBtns}
   </div>`;
+}
+
+async function deleteAgentConstraint(key) {
+  const a = localAgents.find(x => x.key === key);
+  if (!a) return;
+  if (!confirm(`למחוק את האילוץ של ${a.fullName}?\nהנציג יצטרך לשלוח אילוצים מחדש.`)) return;
+  showLoading('מוחק אילוץ...');
+  try {
+    a.submitted = false;
+    a.approved  = false;
+    DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
+    await saveAgents(localAgents);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 async function setManagerShift(key, day, shift) {
