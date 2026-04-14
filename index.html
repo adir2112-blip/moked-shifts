@@ -365,10 +365,32 @@ async function loadAgents() {
   return localAgents;
 }
 
-// save from memory
+// תור כתיבה — מונע overwrite במקביל
+let writeQueue = Promise.resolve();
+
 async function saveAgents(arr) {
-  localAgents = arr;
-  await writeBin(arr);
+  writeQueue = writeQueue.then(async () => {
+    try {
+      // תמיד רענן מהענן לפני שמירה
+      const fresh = await readBin();
+      // מזג: עדכן/הוסף את הנציגים מ-arr
+      const merged = [...fresh];
+      arr.forEach(updated => {
+        const idx = merged.findIndex(a => a.key === updated.key);
+        if (idx >= 0) merged[idx] = updated;
+        else merged.push(updated);
+      });
+      // טפל במחיקות: אם arr קטן משמעותית מ-fresh, זה מחיקה — השתמש ב-arr ישירות
+      const toWrite = arr.length < fresh.length - 1 ? arr : merged;
+      localAgents = toWrite;
+      await writeBin(toWrite);
+    } catch(e) {
+      // אם הרענון נכשל — שמור ישירות
+      localAgents = arr;
+      await writeBin(arr);
+    }
+  }).catch(e => { throw e; });
+  await writeQueue;
 }
 
 function agentKey(fn, ln, phone) {
