@@ -838,6 +838,36 @@ async function saveUserEdit(safeKey, phone) {
 }
 
 // ══════════════════════════════════════════════════════════
+//  UNDO SYSTEM
+// ══════════════════════════════════════════════════════════
+let undoAction = null;
+let undoTimeout = null;
+
+function showUndo(message, action) {
+  if (undoTimeout) { clearTimeout(undoTimeout); }
+  undoAction = action;
+  const bar = document.getElementById('undoBar');
+  const msg = document.getElementById('undoMsg');
+  const bar2 = document.getElementById('undoBar2');
+  if (!bar || !msg) return;
+  msg.textContent = message;
+  bar.style.display = 'flex';
+  bar2.style.transition = 'none';
+  bar2.style.width = '100%';
+  setTimeout(() => { bar2.style.transition = 'width 6s linear'; bar2.style.width = '0%'; }, 50);
+  undoTimeout = setTimeout(() => { bar.style.display = 'none'; undoAction = null; }, 6000);
+}
+
+async function executeUndo() {
+  if (!undoAction) return;
+  clearTimeout(undoTimeout);
+  document.getElementById('undoBar').style.display = 'none';
+  showLoading('מבטל...');
+  try { await undoAction(); } catch(e) { alert('שגיאה בביטול: ' + e.message); }
+  finally { hideLoading(); undoAction = null; }
+}
+
+// ══════════════════════════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════════════════════════
 function setRole(role) {
@@ -1162,6 +1192,7 @@ async function agentConfirmAndSubmit() {
       };
     });
     agent.submitted = true;
+    agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
     // שמור היסטוריית אילוץ
     if (!agent.constraintHistory) agent.constraintHistory = [];
     agent.constraintHistory.push({
@@ -1699,10 +1730,11 @@ function buildAgentCard(agent) {
       }).join('')
     : `<span style="color:var(--muted);font-size:.82rem">טרם הגיש אילוצים</span>`;
 
+  const submittedAtStr = agent.submittedAt ? `<span style="font-size:.7rem;color:var(--muted);display:block;margin-top:2px">🕐 ${agent.submittedAt}</span>` : '';
   let statusBadge;
   if (!sub)      statusBadge = `<span class="sub-badge sub-no">⏳ טרם הגיש</span>`;
-  else if (appr) statusBadge = `<span class="sub-badge sub-approved">✔ מאושר</span>`;
-  else           statusBadge = `<span class="sub-badge sub-yes">📨 ממתין</span>`;
+  else if (appr) statusBadge = `<span class="sub-badge sub-approved">✔ מאושר</span>${submittedAtStr}`;
+  else           statusBadge = `<span class="sub-badge sub-yes">📨 ממתין</span>${submittedAtStr}`;
 
   let actionBtns = '';
   if (sub && appr) {
@@ -1735,14 +1767,16 @@ async function deleteAgentConstraint(key) {
   const a = localAgents.find(x => x.key === key);
   if (!a) return;
   if (!confirm(`למחוק את האילוץ של ${a.fullName}?\nהנציג יצטרך לשלוח אילוצים מחדש.`)) return;
+  const backup = { submitted:a.submitted, approved:a.approved, constraints:JSON.parse(JSON.stringify(a.constraints)) };
   showLoading('מוחק אילוץ...');
   try {
-    a.submitted = false;
-    a.approved  = false;
+    a.submitted = false; a.approved = false;
     DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
-    await saveAgents(localAgents);
-    await renderMgAgents();
-    updatePendingBadge();
+    await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    showUndo(`🗑 אילוץ של ${a.fullName} נמחק`, async () => {
+      a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
+      await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    });
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
@@ -1853,6 +1887,7 @@ async function saveEditAgent(safeKey) {
     if (!agent) return;
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
+    if (!agent.submittedAt) agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
     await saveAgents(localAgents);
     cancelEdit(safeKey);
     await renderMgAgents();
@@ -2016,14 +2051,19 @@ async function revokeAgent(key) {
 
 async function rejectAgent(key) {
   if (!confirm('לדחות את האילוצים של נציג זה?')) return;
+  const a = localAgents.find(x=>x.key===key);
+  if (!a) return;
+  // שמור גיבוי לביטול
+  const backup = { submitted:a.submitted, approved:a.approved, constraints:JSON.parse(JSON.stringify(a.constraints)) };
   showLoading('מעדכן...');
   try {
-    const a = localAgents.find(x=>x.key===key);
-    if (a) {
-      a.submitted = false; a.approved = false;
-      DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
+    a.submitted = false; a.approved = false;
+    DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
+    await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    showUndo(`❌ אילוץ של ${a.fullName} נדחה`, async () => {
+      a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
       await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
-    }
+    });
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
@@ -2686,5 +2726,10 @@ function shuffleArray(arr) {
 
 setRole('agent');
 </script>
+<div id="undoBar" style="display:none;position:fixed;bottom:20px;right:50%;transform:translateX(50%);background:#1f2937;border:1px solid var(--accent);border-radius:10px;padding:12px 20px;z-index:99999;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.5)">
+  <span id="undoMsg" style="color:var(--text);font-size:.88rem"></span>
+  <button id="undoBtn" onclick="executeUndo()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">↩ בטל</button>
+  <div id="undoTimer" style="width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div id="undoBar2" style="height:100%;background:var(--accent);transition:width linear"></div></div>
+</div>
 </body>
 </html>
