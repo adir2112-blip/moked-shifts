@@ -252,11 +252,9 @@ select.filter-sel:focus{border-color:var(--accent)}
 
 <script>
 // ══════════════════════════════════════════════════════════
-//  JSONBIN CONFIG
+//  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════════
-const BIN_ID     = '69c3df29c3097a1dd55b649f';
-const MASTER_KEY = '$2a$10$HWKPxiPXJB6wmLD4jzXZJOHIohHuZ6i.FEADjPiaGYPTqPsN.8GDe';
-const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const FB_URL = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.app';
 
 // ══════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -328,34 +326,37 @@ function hideLoading() {
 }
 
 async function readBin() {
-  const res = await fetch(BIN_URL + '/latest', {
-    method: 'GET',
-    headers: { 'X-Bin-Meta': 'false' }
-  });
-  if (!res.ok) {
-    const txt = await res.text().catch(()=>'');
-    throw new Error('קריאה נכשלה (' + res.status + '): ' + txt.slice(0,120));
-  }
+  const res = await fetch(FB_URL + '/agents.json');
+  if (!res.ok) throw new Error('קריאה נכשלה (' + res.status + ')');
   const data = await res.json();
-  if (data && data.record) return data.record.agents || [];
-  if (data && Array.isArray(data.agents)) return data.agents;
+  if (!data) return [];
+  // Firebase מחזיר object עם keys — המר למערך
   if (Array.isArray(data)) return data;
-  return [];
+  return Object.values(data);
 }
 
 async function writeBin(agents) {
-  const res = await fetch(BIN_URL, {
+  // שמור כ-object עם key לכל נציג — מונע overwrite של נציגים אחרים
+  const obj = {};
+  agents.forEach(a => { obj[a.key.replace(/[.#$/[\]]/g,'_')] = a; });
+  const res = await fetch(FB_URL + '/agents.json', {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': MASTER_KEY
-    },
-    body: JSON.stringify({ agents })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj)
   });
-  if (!res.ok) {
-    const txt = await res.text().catch(()=>'');
-    throw new Error('כתיבה נכשלה (' + res.status + '): ' + txt.slice(0,120));
-  }
+  if (!res.ok) throw new Error('כתיבה נכשלה (' + res.status + ')');
+  return true;
+}
+
+async function updateAgentInDB(agent) {
+  // עדכן נציג בודד — בטוח לכמה מנהלים במקביל
+  const key = agent.key.replace(/[.#$/[\]]/g,'_');
+  const res = await fetch(FB_URL + '/agents/' + key + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(agent)
+  });
+  if (!res.ok) throw new Error('עדכון נכשל (' + res.status + ')');
   return true;
 }
 
@@ -365,33 +366,35 @@ async function loadAgents() {
   return localAgents;
 }
 
-// תור כתיבה — מונע overwrite במקביל
+// תור כתיבה
 let writeQueue = Promise.resolve();
+let _lastSavedKeys = null;
 
 async function saveAgents(arr) {
+  localAgents = arr;
   writeQueue = writeQueue.then(async () => {
-    try {
-      // תמיד רענן מהענן לפני שמירה
-      const fresh = await readBin();
-      // מזג: עדכן/הוסף את הנציגים מ-arr
-      const merged = [...fresh];
-      arr.forEach(updated => {
-        const idx = merged.findIndex(a => a.key === updated.key);
-        if (idx >= 0) merged[idx] = updated;
-        else merged.push(updated);
+    // בדוק אם שינוי בנציג בודד — אם כן עדכן רק אותו (מהיר + בטוח)
+    if (_lastSavedKeys && arr.length === _lastSavedKeys.size) {
+      const changed = arr.filter(a => {
+        const prev = _lastSavedSnapshot?.[a.key];
+        return !prev || JSON.stringify(prev) !== JSON.stringify(a);
       });
-      // טפל במחיקות: אם arr קטן משמעותית מ-fresh, זה מחיקה — השתמש ב-arr ישירות
-      const toWrite = arr.length < fresh.length - 1 ? arr : merged;
-      localAgents = toWrite;
-      await writeBin(toWrite);
-    } catch(e) {
-      // אם הרענון נכשל — שמור ישירות
-      localAgents = arr;
-      await writeBin(arr);
+      if (changed.length === 1) {
+        await updateAgentInDB(changed[0]);
+        _lastSavedSnapshot = _lastSavedSnapshot || {};
+        _lastSavedSnapshot[changed[0].key] = changed[0];
+        return;
+      }
     }
+    // שמור הכל
+    await writeBin(arr);
+    _lastSavedKeys = new Set(arr.map(a=>a.key));
+    _lastSavedSnapshot = {};
+    arr.forEach(a => { _lastSavedSnapshot[a.key] = a; });
   }).catch(e => { throw e; });
   await writeQueue;
 }
+let _lastSavedSnapshot = null;
 
 function agentKey(fn, ln, phone) {
   const base = `${fn.trim()} ${ln.trim()}`.toLowerCase();
