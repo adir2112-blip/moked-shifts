@@ -2551,7 +2551,16 @@ async function removeAgentFromSchedule(safeKey) {
     DAYS.forEach(d => agent.constraints[d] = {type:'none', time:'', note:''});
     await saveAgents(localAgents);
     closeScheduleEdit();
-    generateAndRender(true);
+    // רענן סידור עם localAgents המעודכן (אחרי השמירה)
+    const pool = localAgents.filter(a => a.submitted && a.approved && (!lastGeneratedFilter || a.activity === lastGeneratedFilter));
+    const output = document.getElementById('scheduleOutput');
+    if (output && pool.length) {
+      const sched = buildSchedule(pool);
+      output.innerHTML = renderScheduleTable(sched, pool.length, lastGeneratedFilter||'');
+      lastBuiltSched = { sched, pool, actFilter: lastGeneratedFilter||'' };
+    } else if (output) {
+      output.innerHTML = `<div class="empty"><div class="ico">😕</div><p>אין נציגים מאושרים</p></div>`;
+    }
     updatePendingBadge();
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
