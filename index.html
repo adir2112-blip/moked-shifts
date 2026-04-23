@@ -241,12 +241,14 @@ select.filter-sel:focus{border-color:var(--accent)}
       <button class="tab-btn"        id="mgTab3" onclick="mgTab('history',this)">📚 היסטוריה</button>
       <button class="tab-btn"        id="mgTab4" onclick="mgTab('stats',this)">📊 סטטיסטיקות</button>
       <button class="tab-btn"        id="mgTab5" onclick="mgTab('users',this)">👤 ניהול משתמשים</button>
+      <button class="tab-btn"        id="mgTab6" onclick="mgTab('logs',this)">📋 לוגים</button>
     </div>
     <div id="mgSchedulePane"></div>
     <div id="mgAgentsPane"  style="display:none"></div>
     <div id="mgHistoryPane" style="display:none"></div>
     <div id="mgStatsPane"   style="display:none"></div>
     <div id="mgUsersPane"   style="display:none"></div>
+    <div id="mgLogsPane"    style="display:none"></div>
   </div>
 </div>
 
@@ -263,6 +265,7 @@ const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שי
 const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות'];
 const AGENT_PASS   = '12345';
 const MANAGER_PASS = 'Q1w2e3r4!';
+const ADMIN_PASS   = 'Adirgal123!';
 const COPTS = [
   {v:'none', l:'רגיל',          e:'✅'},
   {v:'off',  l:'חופש',           e:'🏖'},
@@ -330,9 +333,9 @@ async function readBin() {
   if (!res.ok) throw new Error('קריאה נכשלה (' + res.status + ')');
   const data = await res.json();
   if (!data) return [];
-  // Firebase מחזיר object עם keys — המר למערך
-  if (Array.isArray(data)) return data;
-  return Object.values(data);
+  if (Array.isArray(data)) return data.filter(Boolean);
+  if (typeof data === 'object') return Object.values(data).filter(Boolean);
+  return [];
 }
 
 async function writeBin(agents) {
@@ -503,6 +506,7 @@ async function deleteUser(safeKey, phone) {
     const users = JSON.parse(localStorage.getItem('moked_users')||'{}');
     if (phone && users[phone]) { delete users[phone]; localStorage.setItem('moked_users', JSON.stringify(users)); }
   } catch(e){}
+  addLog('מחיקת נציג', safeKey);
   renderUsersTab();
   updatePendingBadge();
 }
@@ -724,6 +728,7 @@ async function saveNewAgentByManager() {
       users[phone] = { firstName:fn, lastName:ln, activity, movementType:mvtype, email, phone, joinDate:agent.joinDate, updatedAt:Date.now() };
       localStorage.setItem('moked_users', JSON.stringify(users));
     } catch(e){}
+    addLog('הוספת נציג', `${fn} ${ln} — ${activity}`);
     document.getElementById('addAgentPanel').innerHTML = '';
     renderUsersTab();
     updatePendingBadge();
@@ -1263,6 +1268,7 @@ async function enterManager() {
     renderMgSchedule();
     await renderMgAgents();
     updatePendingBadge();
+    scheduleAutoReset();
     startAutoRefresh(async () => {
       if (!currentlyEditingKey) {
         try {
@@ -1299,14 +1305,179 @@ function mgTab(pane, btn) {
   document.getElementById('mgHistoryPane').style.display  = pane==='history'  ? '' : 'none';
   document.getElementById('mgStatsPane').style.display    = pane==='stats'    ? '' : 'none';
   document.getElementById('mgUsersPane').style.display    = pane==='users'    ? '' : 'none';
+  document.getElementById('mgLogsPane').style.display     = pane==='logs'     ? '' : 'none';
   if (pane==='schedule') renderMgSchedule();
   if (pane==='agents')   renderMgAgents();
   if (pane==='history')  renderHistory();
   if (pane==='stats')    renderStats();
   if (pane==='users')    renderUsersTab();
+  if (pane==='logs')     renderLogs();
 }
 
 // ── Schedule Tab ──
+// ══════════════════════════════════════════════════════════
+//  ADMIN PASSWORD CHECK
+// ══════════════════════════════════════════════════════════
+function checkAdminPass(action) {
+  const pass = prompt(`פעולה זו דורשת סיסמת אדמין:\n"${action}"\n\nהזן סיסמת אדמין:`);
+  if (pass === null) return false;
+  if (pass !== ADMIN_PASS) { alert('סיסמה שגויה!'); return false; }
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOGGING SYSTEM
+// ══════════════════════════════════════════════════════════
+function addLog(action, details) {
+  try {
+    const logs = JSON.parse(localStorage.getItem('moked_logs') || '[]');
+    logs.push({
+      action,
+      details,
+      user: currentUser?.fullName || 'לא ידוע',
+      time: new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}),
+      ts: Date.now()
+    });
+    // שמור עד 200 פעולות אחרונות
+    localStorage.setItem('moked_logs', JSON.stringify(logs.slice(-200)));
+  } catch(e){}
+}
+
+function renderLogs() {
+  const pane = document.getElementById('mgLogsPane');
+  let logs = [];
+  try { logs = JSON.parse(localStorage.getItem('moked_logs') || '[]'); } catch(e){}
+  
+  if (!logs.length) {
+    pane.innerHTML = `<div class="empty"><div class="ico">📋</div><p>אין לוגים עדיין</p></div>`;
+    return;
+  }
+
+  const icons = {
+    'מחיקת סידור':'🗑', 'אפס שבוע':'🔄', 'אישור נציג':'✅',
+    'דחיית נציג':'❌', 'מחיקת אילוץ':'🗑', 'הוספת נציג':'➕',
+    'מחיקת נציג':'🗑', 'עריכת נציג':'✏️', 'שחזור סידור':'↩'
+  };
+
+  const rows = [...logs].reverse().map(l => {
+    const icon = icons[l.action] || '📌';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 12px;color:var(--muted);font-size:.8rem;white-space:nowrap">${l.time}</td>
+      <td style="padding:8px 8px;font-weight:600">${icon} ${l.action}</td>
+      <td style="padding:8px 8px;font-size:.82rem;color:var(--muted)">${l.user}</td>
+      <td style="padding:8px 8px;font-size:.82rem;color:var(--text)">${l.details||''}</td>
+    </tr>`;
+  }).join('');
+
+  pane.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">📋 לוג פעולות (${logs.length})</div>
+        <button class="btn btn-danger btn-sm" onclick="if(checkAdminPass('מחיקת כל הלוגים')){localStorage.removeItem('moked_logs');renderLogs();}">🗑 נקה לוגים</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead><tr style="background:var(--s2);text-align:right">
+            <th style="padding:8px 12px;color:var(--muted);font-weight:600">זמן</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">פעולה</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">משתמש</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">פרטים</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTO RESET — כל יום שני בשעה 18:00
+// ══════════════════════════════════════════════════════════
+function scheduleAutoReset() {
+  const check = () => {
+    const now = new Date();
+    if (now.getDay() === 1 && now.getHours() === 18 && now.getMinutes() === 0) {
+      const lastReset = localStorage.getItem('moked_last_auto_reset');
+      const todayKey  = now.toLocaleDateString('he-IL');
+      if (lastReset !== todayKey) {
+        localStorage.setItem('moked_last_auto_reset', todayKey);
+        autoResetWeek();
+      }
+    }
+  };
+  setInterval(check, 30000); // בדוק כל 30 שניות
+}
+
+async function autoResetWeek() {
+  try {
+    localAgents.forEach(a => {
+      a.submitted = false; a.approved = false;
+      DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
+      if (a.managerShift) DAYS.forEach(d => a.managerShift[d] = '');
+    });
+    await saveAgents(localAgents);
+    lastGeneratedFilter = null;
+    lastBuiltSched = null;
+    addLog('אפס שבוע', 'איפוס אוטומטי — יום שני 18:00');
+    if (currentRole === 'manager') {
+      renderMgSchedule();
+      await renderMgAgents();
+      updatePendingBadge();
+      alert('✅ הסידור אופס אוטומטית לשבוע חדש!');
+    }
+  } catch(e) { console.error('שגיאה באיפוס אוטומטי:', e); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  SCHEDULE RESTORE
+// ══════════════════════════════════════════════════════════
+function saveScheduleSnapshot() {
+  if (!lastBuiltSched) return;
+  try {
+    const snap = {
+      time: new Date().toLocaleString('he-IL'),
+      actFilter: lastBuiltSched.actFilter,
+      agents: lastBuiltSched.pool.map(a => ({
+        key:a.key, fullName:a.fullName, activity:a.activity,
+        movementType:a.movementType, constraints:a.constraints,
+        managerShift:a.managerShift, submitted:true, approved:true
+      }))
+    };
+    const snaps = JSON.parse(localStorage.getItem('moked_snapshots') || '[]');
+    // שמור עד 5 snapshots
+    snaps.push(snap);
+    localStorage.setItem('moked_snapshots', JSON.stringify(snaps.slice(-5)));
+  } catch(e){}
+}
+
+async function restoreSchedule() {
+  const snaps = JSON.parse(localStorage.getItem('moked_snapshots') || '[]');
+  if (!snaps.length) { alert('אין סידור שמור לשחזור'); return; }
+  
+  const last = snaps[snaps.length - 1];
+  if (!confirm(`לשחזר את סידור "${last.actFilter||'כולן'}" מ-${last.time}?\n${last.agents.length} נציגים יושחזרו.`)) return;
+  if (!checkAdminPass('שחזור סידור')) return;
+
+  showLoading('משחזר...');
+  try {
+    last.agents.forEach(snap => {
+      const agent = localAgents.find(a => a.key === snap.key);
+      if (agent) {
+        agent.constraints  = snap.constraints;
+        agent.managerShift = snap.managerShift;
+        agent.submitted    = true;
+        agent.approved     = true;
+      }
+    });
+    await saveAgents(localAgents);
+    addLog('שחזור סידור', `שוחזר סידור ${last.actFilter||'כולן'} מ-${last.time}`);
+    generateAndRender(true);
+    await renderMgAgents();
+    updatePendingBadge();
+    alert(`✅ הסידור שוחזר! ${last.agents.length} נציגים.`);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 function renderMgSchedule() {
   const pane = document.getElementById('mgSchedulePane');
   const existingFilter = pane.querySelector('#actFilter');
@@ -1325,6 +1496,7 @@ function renderMgSchedule() {
       <select class="filter-sel" id="actFilter" onchange="renderMgSchedule()">${actOpts}</select>
       <button class="btn btn-success" onclick="generateAndRender()">⚡ צור סידור</button>
       <button class="btn btn-warn btn-sm" onclick="resetAllSubmissions()">🔄 אפס שבוע חדש</button>
+      <button class="btn btn-sm" style="background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)" onclick="restoreSchedule()">↩ שחזר סידור</button>
       ${clearBtn}
     </div>
     <div id="scheduleOutput">${existingOutput}</div>`;
@@ -1352,6 +1524,7 @@ function generateAndRender(silent) {
   output.innerHTML = renderScheduleTable(sched, pool.length, actFilter);
   // שמור את הסידור האחרון בזיכרון לשליחת מיילים ידנית
   lastBuiltSched = { sched, pool, actFilter };
+  saveScheduleSnapshot();
   // שמור להיסטוריה
   saveToHistory(sched, pool, actFilter);
 }
@@ -1944,6 +2117,7 @@ async function approveAgent(key) {
     if (!a) return;
     a.approved = true;
     await saveAgents(localAgents);
+    addLog('אישור נציג', a.fullName);
     await renderMgAgents();
     updatePendingBadge();
   } catch(e) { alert('שגיאה: ' + e.message); }
@@ -2085,6 +2259,7 @@ async function rejectAgent(key) {
     a.submitted = false; a.approved = false;
     DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
     await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    addLog('דחיית נציג', a.fullName);
     showUndo(`❌ אילוץ של ${a.fullName} נדחה`, async () => {
       a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
       await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
@@ -2095,6 +2270,7 @@ async function rejectAgent(key) {
 
 async function clearScheduleForActivity(activity) {
   if (!confirm(`למחוק את סידור העבודה של "${activity}"?\nהנציגים ישארו אבל השיבוצים יתאפסו.`)) return;
+  if (!checkAdminPass(`מחיקת סידור ${activity}`)) return;
   // אפס את managerShift הרנדומלי לנציגי הפעילות (כדי שיוכלו לשבץ מחדש)
   let changed = false;
   localAgents.forEach(a => {
@@ -2111,7 +2287,7 @@ async function clearScheduleForActivity(activity) {
     }
   });
   if (changed) await saveAgents(localAgents).catch(()=>{});
-
+  addLog('מחיקת סידור', `סידור ${activity} נמחק`);
   const output = document.getElementById('scheduleOutput');
   if (output) output.innerHTML = `<div class="empty"><div class="ico">📅</div><p>הסידור של ${activity} נמחק. לחץ "צור סידור" ליצירה מחדש.</p></div>`;
   lastBuiltSched = null;
@@ -2397,6 +2573,7 @@ async function deleteAgentsForActivity(activity) {
 
 async function resetAllSubmissions() {
   if (!confirm('האם לאפס את כל האילוצים? (לתחילת שבוע חדש)')) return;
+  if (!checkAdminPass('איפוס כל האילוצים')) return;
   showLoading('מאפס...');
   try {
     localAgents.forEach(a => {
@@ -2404,6 +2581,7 @@ async function resetAllSubmissions() {
       DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
     });
     await saveAgents(localAgents);
+    addLog('אפס שבוע', 'איפוס ידני של כל האילוצים');
     lastGeneratedFilter = null;
     renderMgSchedule();
     await renderMgAgents();
