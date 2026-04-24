@@ -1478,6 +1478,48 @@ async function restoreSchedule() {
   finally { hideLoading(); }
 }
 
+async function restoreFromHistory() {
+  if (!checkAdminPass('שחזור מהיסטוריה')) return;
+
+  const TARGET_WEEK = '26.04–01.05';
+
+  // מצא נציגים שהגישו לשבוע הספציפי
+  const toRestore = localAgents.filter(a => 
+    a.constraintHistory && a.constraintHistory.find(h => h.week === TARGET_WEEK)
+  );
+
+  if (!toRestore.length) {
+    alert(`לא נמצאו נציגים שהגישו אילוצים לשבוע ${TARGET_WEEK}`);
+    return;
+  }
+
+  if (!confirm(`לשחזר אילוצים לשבוע ${TARGET_WEEK} עבור ${toRestore.length} נציגים?\nהם יסומנו כמאושרים אוטומטית.`)) return;
+
+  showLoading('משחזר מהיסטוריה...');
+  try {
+    let restored = 0;
+    toRestore.forEach(agent => {
+      const entry = agent.constraintHistory.find(h => h.week === TARGET_WEEK);
+      if (!entry || !entry.constraints) return;
+      agent.constraints = JSON.parse(JSON.stringify(entry.constraints));
+      agent.submitted   = true;
+      agent.approved    = true;
+      restored++;
+    });
+
+    await saveAgents(localAgents);
+    addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}`);
+
+    const filterEl = document.getElementById('actFilter');
+    if (filterEl && filterEl.value) generateAndRender(true);
+    await renderMgAgents();
+    updatePendingBadge();
+
+    alert(`✅ שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}!`);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 function renderMgSchedule() {
   const pane = document.getElementById('mgSchedulePane');
   const existingFilter = pane.querySelector('#actFilter');
@@ -1497,6 +1539,7 @@ function renderMgSchedule() {
       <button class="btn btn-success" onclick="generateAndRender()">⚡ צור סידור</button>
       <button class="btn btn-warn btn-sm" onclick="resetAllSubmissions()">🔄 אפס שבוע חדש</button>
       <button class="btn btn-sm" style="background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)" onclick="restoreSchedule()">↩ שחזר סידור</button>
+      <button class="btn btn-sm" style="background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)" onclick="restoreFromHistory()">📋 שחזר מהיסטוריה</button>
       ${clearBtn}
     </div>
     <div id="scheduleOutput">${existingOutput}</div>`;
