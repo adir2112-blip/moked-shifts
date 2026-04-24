@@ -1481,41 +1481,37 @@ async function restoreSchedule() {
 async function restoreFromHistory() {
   if (!checkAdminPass('שחזור מהיסטוריה')) return;
 
-  const TARGET_WEEK = '26.04–01.05';
-
-  // מצא נציגים שהגישו לשבוע הספציפי
-  const toRestore = localAgents.filter(a => 
-    a.constraintHistory && a.constraintHistory.find(h => h.week === TARGET_WEEK)
-  );
+  const toRestore = localAgents.filter(a => a.constraintHistory && a.constraintHistory.length > 0);
 
   if (!toRestore.length) {
-    alert(`לא נמצאו נציגים שהגישו אילוצים לשבוע ${TARGET_WEEK}`);
+    alert('לא נמצאו נציגים עם היסטוריית אילוצים.');
     return;
   }
 
-  if (!confirm(`לשחזר אילוצים לשבוע ${TARGET_WEEK} עבור ${toRestore.length} נציגים?\nהם יסומנו כמאושרים אוטומטית.`)) return;
+  if (!confirm(`לשחזר אילוצים אחרונים עבור ${toRestore.length} נציגים?\nהם יסומנו כמאושרים אוטומטית.`)) return;
 
   showLoading('משחזר מהיסטוריה...');
   try {
     let restored = 0;
     toRestore.forEach(agent => {
-      const entry = agent.constraintHistory.find(h => h.week === TARGET_WEEK);
-      if (!entry || !entry.constraints) return;
-      agent.constraints = JSON.parse(JSON.stringify(entry.constraints));
+      // תמיד קח את האילוץ האחרון
+      const last = agent.constraintHistory[agent.constraintHistory.length - 1];
+      if (!last || !last.constraints) return;
+      agent.constraints = JSON.parse(JSON.stringify(last.constraints));
       agent.submitted   = true;
       agent.approved    = true;
       restored++;
     });
 
     await saveAgents(localAgents);
-    addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}`);
+    addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים`);
 
     const filterEl = document.getElementById('actFilter');
     if (filterEl && filterEl.value) generateAndRender(true);
     await renderMgAgents();
     updatePendingBadge();
 
-    alert(`✅ שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}!`);
+    alert(`✅ שוחזרו ${restored} נציגים מהאילוצים האחרונים שלהם!`);
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
