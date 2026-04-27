@@ -338,10 +338,14 @@ async function readBin() {
   return [];
 }
 
+function fbKey(key) {
+  // Firebase לא מאפשר: . # $ / [ ] ורווחים בנתיב
+  return key.replace(/[.#$/[\]\s]/g, '_');
+}
+
 async function writeBin(agents) {
-  // שמור כ-object עם key לכל נציג — מונע overwrite של נציגים אחרים
   const obj = {};
-  agents.forEach(a => { obj[a.key.replace(/[.#$/[\]]/g,'_')] = a; });
+  agents.forEach(a => { obj[fbKey(a.key)] = a; });
   const res = await fetch(FB_URL + '/agents.json', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -352,8 +356,7 @@ async function writeBin(agents) {
 }
 
 async function updateAgentInDB(agent) {
-  // עדכן נציג בודד — בטוח לכמה מנהלים במקביל
-  const key = agent.key.replace(/[.#$/[\]]/g,'_');
+  const key = fbKey(agent.key);
   const res = await fetch(FB_URL + '/agents/' + key + '.json', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
