@@ -339,8 +339,8 @@ async function readBin() {
 }
 
 function fbKey(key) {
-  // Firebase לא מאפשר: . # $ / [ ] ורווחים בנתיב
-  return key.replace(/[.#$/[\]\s]/g, '_');
+  if (!key) return 'unknown_' + Date.now();
+  return String(key).replace(/[.#$/[\]\s]/g, '_');
 }
 
 async function writeBin(agents) {
