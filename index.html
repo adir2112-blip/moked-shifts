@@ -490,6 +490,8 @@ function autoFillFromPhone(rawPhone) {
 //  USERS MANAGEMENT TAB
 // ══════════════════════════════════════════════════════════
 let userSearch = '';
+let userActivityFilter = '';
+let userStatusFilter = '';
 
 async function deleteUser(safeKey, phone) {
   if (!confirm('למחוק את המשתמש?\nאם יתחבר שוב עם אותו טלפון — ייווצר מחדש כמשתמש חדש.')) return;
@@ -527,12 +529,16 @@ function renderUsersTab() {
     if (!phoneMap[phone]) phoneMap[phone] = { ...u, key: `phone_${phone}`, fullName:`${u.firstName} ${u.lastName}`, submitted:false, approved:false, _source:'local' };
   });
 
-  const users = Object.values(phoneMap).filter(u =>
-    !userSearch ||
+  let users = Object.values(phoneMap).filter(u =>
+    (!userSearch ||
     (u.fullName||'').includes(userSearch) ||
     (u.phone||'').includes(userSearch) ||
-    (u.email||'').includes(userSearch)
+    (u.email||'').includes(userSearch))
   );
+  if (userActivityFilter) users = users.filter(u => (u.allowedActivity||u.activity||'') === userActivityFilter);
+  if (userStatusFilter === 'approved') users = users.filter(u => u.approved);
+  if (userStatusFilter === 'pending')  users = users.filter(u => u.submitted && !u.approved);
+  if (userStatusFilter === 'none')     users = users.filter(u => !u.submitted && !u.approved);
 
   const rows = users.map(u => {
     const ac = actColor(u.activity);
@@ -576,13 +582,27 @@ function renderUsersTab() {
 
   pane.innerHTML = `
     <div class="card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div class="card-title" style="margin:0">👤 ניהול משתמשים</div>
-        <input placeholder="🔍 חיפוש לפי שם / טלפון / מייל..." value="${userSearch}"
-          oninput="userSearch=this.value;renderUsersTab()"
-          style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;flex:1;min-width:200px"/>
         <button class="btn btn-primary btn-sm" onclick="openAddAgentByManager()">➕ הוסף נציג</button>
         <span style="color:var(--muted);font-size:.82rem">${users.length} משתמשים</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <input placeholder="🔍 חיפוש לפי שם / טלפון / מייל..." value="${userSearch}"
+          oninput="userSearch=this.value;renderUsersTab()"
+          style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;flex:1;min-width:180px"/>
+        <select onchange="userActivityFilter=this.value;renderUsersTab()"
+          style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer">
+          <option value="" ${userActivityFilter===''?'selected':''}>🏢 כל המחלקות</option>
+          ${ACTIVITIES.map(a=>`<option value="${a}" ${userActivityFilter===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+        <select onchange="userStatusFilter=this.value;renderUsersTab()"
+          style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer">
+          <option value="" ${userStatusFilter===''?'selected':''}>📋 כל הסטטוסים</option>
+          <option value="approved" ${userStatusFilter==='approved'?'selected':''}>✅ מאושר</option>
+          <option value="pending"  ${userStatusFilter==='pending'?'selected':''}>⏳ ממתין</option>
+          <option value="none"     ${userStatusFilter==='none'?'selected':''}>○ לא הגיש</option>
+        </select>
       </div>
       <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">☁️ = ענן &nbsp;|&nbsp; 💾 = מקומי &nbsp;|&nbsp; 📋 = היסטוריה</p>
       <div style="overflow-x:auto">
