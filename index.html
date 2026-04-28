@@ -1504,37 +1504,62 @@ async function restoreSchedule() {
 async function restoreFromHistory() {
   if (!checkAdminPass('שחזור מהיסטוריה')) return;
 
-  const toRestore = localAgents.filter(a => a.constraintHistory && a.constraintHistory.length > 0);
+  // מצא את כל השבועות הקיימים בהיסטוריה
+  const weekSet = new Set();
+  localAgents.forEach(a => {
+    (a.constraintHistory||[]).forEach(h => { if (h.week) weekSet.add(h.week); });
+  });
+  const weeks = [...weekSet].sort();
 
-  if (!toRestore.length) {
-    alert('לא נמצאו נציגים עם היסטוריית אילוצים.');
+  if (!weeks.length) {
+    alert('לא נמצאה היסטוריית אילוצים.');
     return;
   }
 
-  if (!confirm(`לשחזר אילוצים אחרונים עבור ${toRestore.length} נציגים?\nהם יסומנו כמאושרים אוטומטית.`)) return;
+  // הצג תפריט בחירת שבוע
+  const weekOptions = weeks.map((w,i) => `${i+1}. ${w}`).join('\n');
+  const choice = prompt(`בחר שבוע לשחזור:\n\n${weekOptions}\n\nהזן מספר:`);
+  if (!choice) return;
+
+  const idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= weeks.length) {
+    alert('בחירה לא תקינה');
+    return;
+  }
+
+  const TARGET_WEEK = weeks[idx];
+  const toRestore = localAgents.filter(a =>
+    a.constraintHistory && a.constraintHistory.find(h => h.week === TARGET_WEEK)
+  );
+
+  if (!toRestore.length) {
+    alert(`לא נמצאו נציגים שהגישו לשבוע ${TARGET_WEEK}`);
+    return;
+  }
+
+  if (!confirm(`לשחזר אילוצים לשבוע ${TARGET_WEEK} עבור ${toRestore.length} נציגים?\nהם יסומנו כמאושרים אוטומטית.`)) return;
 
   showLoading('משחזר מהיסטוריה...');
   try {
     let restored = 0;
     toRestore.forEach(agent => {
-      // תמיד קח את האילוץ האחרון
-      const last = agent.constraintHistory[agent.constraintHistory.length - 1];
-      if (!last || !last.constraints) return;
-      agent.constraints = JSON.parse(JSON.stringify(last.constraints));
+      const entry = agent.constraintHistory.find(h => h.week === TARGET_WEEK);
+      if (!entry || !entry.constraints) return;
+      agent.constraints = JSON.parse(JSON.stringify(entry.constraints));
       agent.submitted   = true;
       agent.approved    = true;
       restored++;
     });
 
     await saveAgents(localAgents);
-    addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים`);
+    addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}`);
 
     const filterEl = document.getElementById('actFilter');
     if (filterEl && filterEl.value) generateAndRender(true);
     await renderMgAgents();
     updatePendingBadge();
 
-    alert(`✅ שוחזרו ${restored} נציגים מהאילוצים האחרונים שלהם!`);
+    alert(`✅ שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}!`);
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
