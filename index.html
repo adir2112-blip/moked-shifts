@@ -1334,7 +1334,7 @@ function mgTab(pane, btn) {
   if (pane==='history')  renderHistory();
   if (pane==='stats')    renderStats();
   if (pane==='users')    renderUsersTab();
-  if (pane==='logs')     renderLogs();
+  if (pane==='logs')     renderLogs().catch(()=>{});
 }
 
 // ── Schedule Tab ──
@@ -1353,23 +1353,42 @@ function checkAdminPass(action) {
 // ══════════════════════════════════════════════════════════
 function addLog(action, details) {
   try {
-    const logs = JSON.parse(localStorage.getItem('moked_logs') || '[]');
-    logs.push({
+    const log = {
       action,
       details,
       user: currentUser?.fullName || 'לא ידוע',
       time: new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}),
       ts: Date.now()
-    });
-    // שמור עד 200 פעולות אחרונות
-    localStorage.setItem('moked_logs', JSON.stringify(logs.slice(-200)));
+    };
+    // שמור ב-Firebase תחת /logs
+    const key = 'log_' + log.ts;
+    fetch(FB_URL + '/logs/' + key + '.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(log)
+    }).catch(()=>{});
   } catch(e){}
 }
 
-function renderLogs() {
+async function clearAllLogs() {
+  if (!checkAdminPass('מחיקת כל הלוגים')) return;
+  showLoading('מוחק לוגים...');
+  try {
+    await fetch(FB_URL + '/logs.json', {method:'DELETE'});
+    renderLogs();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function renderLogs() {
   const pane = document.getElementById('mgLogsPane');
+  pane.innerHTML = `<div class="empty"><div class="spinner"></div><p>טוען לוגים...</p></div>`;
   let logs = [];
-  try { logs = JSON.parse(localStorage.getItem('moked_logs') || '[]'); } catch(e){}
+  try {
+    const res = await fetch(FB_URL + '/logs.json');
+    const data = await res.json();
+    if (data) logs = Object.values(data).filter(Boolean).sort((a,b) => (b.ts||0)-(a.ts||0));
+  } catch(e){}
   
   if (!logs.length) {
     pane.innerHTML = `<div class="empty"><div class="ico">📋</div><p>אין לוגים עדיין</p></div>`;
@@ -1396,7 +1415,7 @@ function renderLogs() {
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0">📋 לוג פעולות (${logs.length})</div>
-        <button class="btn btn-danger btn-sm" onclick="if(checkAdminPass('מחיקת כל הלוגים')){localStorage.removeItem('moked_logs');renderLogs();}">🗑 נקה לוגים</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllLogs()">🗑 נקה לוגים</button>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:.85rem">
