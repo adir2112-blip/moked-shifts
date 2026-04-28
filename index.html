@@ -413,6 +413,19 @@ async function getOrCreateAgent(fn, ln, activity) {
   if (!localAgents.length) await loadAgents();
   const key = agentKey(fn, ln, currentUser?.phone || '');
   let agent = localAgents.find(a => a.key === key);
+  // בדוק כפילות לפי שם מלא — מחק ידניות אם יש phone_
+  if (!agent) {
+    const byName = localAgents.filter(a => a.fullName === `${fn} ${ln}`);
+    if (byName.length > 1) {
+      const phoneRec = byName.find(a => a.key.startsWith('phone_'));
+      if (phoneRec) {
+        localAgents = localAgents.filter(a => a.fullName !== phoneRec.fullName || a.key === phoneRec.key);
+        agent = phoneRec;
+      }
+    } else if (byName.length === 1) {
+      agent = byName[0];
+    }
+  }
   if (!agent) {
     const constraints = {};
     DAYS.forEach(d => constraints[d] = {type:'none', time:''});
@@ -545,7 +558,7 @@ function renderUsersTab() {
 
   const rows = users.map(u => {
     const ac = actColor(u.activity);
-    const safeKey = (u.key||'').replace(/[\s']/g,'_');
+    const safeKey = fbKey(u.key||'');
     const statusLabel = u.approved ? '✅ מאושר' : u.submitted ? '⏳ ממתין' : '○ לא הגיש';
     const statusColor = u.approved ? 'var(--green)' : u.submitted ? 'var(--warn)' : 'var(--muted)';
     const sourceIcon  = u._source === 'local' ? '💾' : '☁️';
@@ -631,7 +644,7 @@ function renderUsersTab() {
 }
 
 function openUserHistory(safeKey) {
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (!agent) return;
   const hist = agent.constraintHistory || [];
   const panel = document.getElementById('userHistoryPanel');
@@ -727,8 +740,9 @@ async function saveNewAgentByManager() {
   if (!phone)        { alert('יש להזין מספר טלפון'); return; }
   if (!activity)     { alert('יש לבחור מחלקה'); return; }
 
-  // בדוק שהטלפון לא קיים כבר
+  // בדוק שהטלפון או השם לא קיימים כבר
   if (localAgents.find(a => a.phone === phone)) { alert('נציג עם טלפון זה כבר קיים!'); return; }
+  if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) { alert(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`); return; }
 
   const key = `phone_${phone}`;
   const constraints = {};
@@ -760,7 +774,7 @@ async function saveNewAgentByManager() {
 }
 
 function openEditUser(safeKey, phone) {
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   let lsUser  = null;
   try { const users = JSON.parse(localStorage.getItem('moked_users')||'{}'); lsUser = users[phone] || null; } catch(e){}
   const u = agent || lsUser || {};
@@ -868,7 +882,7 @@ async function saveUserEdit(safeKey, phone) {
     activity: activity || (localAgents.find(a=>a.key.replace(/[\s']/g,'_')===safeKey)?.activity || '') };
 
   // עדכן ב-localAgents (ענן)
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (agent) {
     Object.assign(agent, updates);
     if (newPhone && newPhone !== phone) agent.key = `phone_${newPhone}`;
@@ -1786,7 +1800,7 @@ function renderScheduleTable(sched, total, actFilter) {
         const act = (!actFilter && a.activity) ? `<span class="pact"> · ${a.activity}</span>` : '';
         const tm  = a.time ? `<span class="pact"> ⏰${a.time}</span>` : '';
         const agentObj = localAgents.find(x => x.fullName === a.name);
-        const safeKey  = agentObj ? agentObj.key.replace(/[\s']/g,'_') : '';
+        const safeKey  = agentObj ? fbKey(agentObj.key) : '';
         const clickable = safeKey ? `onclick="openScheduleEdit('${safeKey}')" style="cursor:pointer" title="לחץ לעריכה"` : '';
         const ac = actColor(a.activity);
         const pillStyle = !actFilter && a.activity ? `style="background:${ac.bg};border:1px solid ${ac.border};color:${ac.text}"` : '';
@@ -2002,7 +2016,7 @@ async function renderMgAgents() {
 
 function buildAgentCard(agent) {
   const sub = agent.submitted, appr = agent.approved;
-  const safeKey = agent.key.replace(/[\s']/g,'_');
+  const safeKey = fbKey(agent.key);
   const isMovement = agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital;
   const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--accent2)'};
   const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
@@ -2017,9 +2031,12 @@ function buildAgentCard(agent) {
         // כפתורי שיבוץ ידני — רק למובמנט ביום "רגיל"
         let shiftToggle = '';
         if (isMovement && c.type === 'none') {
+          const isDigital = agent.movementType === 'דיגיטל';
           const ms = agent.managerShift?.[day] || '';
-          const btn8 = `<button onclick="setManagerShift('${agent.key}','${day}','8')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms==='8'?'var(--green)':'var(--border)'};background:${ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms==='8'?'var(--green)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">08–17</button>`;
-          const btn9 = `<button onclick="setManagerShift('${agent.key}','${day}','9')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms==='9'?'var(--accent)':'var(--border)'};background:${ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms==='9'?'var(--accent)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">09–18</button>`;
+          const s8 = isDigital ? 'd8' : '8';
+          const s9 = isDigital ? 'd9' : '9';
+          const btn8 = `<button onclick="setManagerShift('${agent.key}','${day}','${s8}')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};background:${ms===s8?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">08–17</button>`;
+          const btn9 = `<button onclick="setManagerShift('${agent.key}','${day}','${s9}')" style="padding:2px 8px;border-radius:4px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};background:${ms===s9?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms===s9?'var(--accent)':'var(--muted)'};font-size:.7rem;cursor:pointer;font-family:inherit">09–18</button>`;
           shiftToggle = `<div style="display:flex;gap:4px;margin-right:4px">${btn8}${btn9}</div>`;
         }
 
@@ -2121,7 +2138,7 @@ function toggleEditAgent(safeKey) {
   if (currentlyEditingKey && currentlyEditingKey !== safeKey) cancelEdit(currentlyEditingKey);
   currentlyEditingKey = safeKey;
 
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (!agent) return;
 
   const sum = document.getElementById('csummary-'+safeKey);
@@ -2187,7 +2204,7 @@ function collectEditedConstraints(safeKey) {
 async function saveEditAgent(safeKey) {
   showLoading('שומר...');
   try {
-    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    const agent = localAgents.find(a => fbKey(a.key) === safeKey);
     if (!agent) return;
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
@@ -2203,7 +2220,7 @@ async function saveEditAgent(safeKey) {
 async function saveAndApproveAgent(safeKey) {
   showLoading('שומר ומאשר...');
   try {
-    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    const agent = localAgents.find(a => fbKey(a.key) === safeKey);
     if (!agent) return;
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
@@ -2495,6 +2512,11 @@ async function saveManualAgentFromPopup(activity) {
     }
   });
 
+  // בדוק כפילות לפי שם
+  if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) {
+    alert(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`);
+    return;
+  }
   const key   = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
   const agent = {
     key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln,
@@ -2698,7 +2720,7 @@ async function resetAllSubmissions() {
 
 // ── Edit from schedule (click on pill) ──
 function openScheduleEdit(safeKey) {
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (!agent) return;
 
   const isMovement = agent.activity === 'מובמנט';
@@ -2712,19 +2734,22 @@ function openScheduleEdit(safeKey) {
     if (val==='late')  timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
     if (val==='early') timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
 
-    // כפתורי שיבוץ ידני — רק מובמנט, יום רגיל
+    // כפתורי שיבוץ ידני — רק מובמנט/מאוחדת דיגיטל, יום רגיל
     let shiftToggleH = '';
     if (isMovement && val === 'none') {
+      const isDigital = agent.movementType === 'דיגיטל';
       const ms = agent.managerShift?.[day] || '';
+      const s8 = isDigital ? 'd8' : '8';
+      const s9 = isDigital ? 'd9' : '9';
       shiftToggleH = `<div style="display:flex;gap:5px;margin-top:5px">
         <span style="font-size:.72rem;color:var(--muted);padding-top:3px">משמרת:</span>
-        <button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','8')"
-          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms==='8'?'var(--green)':'var(--border)'};
-          background:${ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms==='8'?'var(--green)':'var(--muted)'};
+        <button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s8}')"
+          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
+          background:${ms===s8?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};
           font-size:.75rem;cursor:pointer;font-family:inherit">08–17</button>
-        <button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','9')"
-          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms==='9'?'var(--accent)':'var(--border)'};
-          background:${ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms==='9'?'var(--accent)':'var(--muted)'};
+        <button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s9}')"
+          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};
+          background:${ms===s9?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms===s9?'var(--accent)':'var(--muted)'};
           font-size:.75rem;cursor:pointer;font-family:inherit">09–18</button>
       </div>`;
     }
@@ -2787,22 +2812,26 @@ function modalSelChange(safeKey, day, sel) {
 }
 
 function modalShiftToggle(safeKey, day, shift) {
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
-  if (!agent) return;
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey || a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) { console.warn('agent not found:', safeKey); return; }
   if (!agent.managerShift) agent.managerShift = {};
   agent.managerShift[day] = (agent.managerShift[day] === shift) ? '' : shift;
-  // update button styles live
+  const ms  = agent.managerShift[day];
+  const isDigital = agent.movementType === 'דיגיטל';
+  const s8  = isDigital ? 'd8' : '8';
+  const s9  = isDigital ? 'd9' : '9';
   const btn8 = document.getElementById(`mb8-${safeKey}-${day}`);
   const btn9 = document.getElementById(`mb9-${safeKey}-${day}`);
-  const ms = agent.managerShift[day];
-  if (btn8) { btn8.style.borderColor = ms==='8'?'var(--green)':'var(--border)'; btn8.style.background = ms==='8'?'rgba(63,185,80,.2)':'var(--bg)'; btn8.style.color = ms==='8'?'var(--green)':'var(--muted)'; }
-  if (btn9) { btn9.style.borderColor = ms==='9'?'var(--accent)':'var(--border)'; btn9.style.background = ms==='9'?'rgba(88,166,255,.2)':'var(--bg)'; btn9.style.color = ms==='9'?'var(--accent)':'var(--muted)'; }
+  if (btn8) { btn8.style.borderColor = ms===s8?'var(--green)':'var(--border)'; btn8.style.background = ms===s8?'rgba(63,185,80,.2)':'var(--bg)'; btn8.style.color = ms===s8?'var(--green)':'var(--muted)'; }
+  if (btn9) { btn9.style.borderColor = ms===s9?'var(--accent)':'var(--border)'; btn9.style.background = ms===s9?'rgba(88,166,255,.2)':'var(--bg)'; btn9.style.color = ms===s9?'var(--accent)':'var(--muted)'; }
+  // שמור לענן ורענן סידור
+  saveAgents(localAgents).catch(()=>{});
 }
 
 async function saveModalEdit(safeKey, andApprove) {
   showLoading('שומר...');
   try {
-    const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+    const agent = localAgents.find(a => fbKey(a.key) === safeKey);
     if (!agent) return;
     DAYS.forEach(day => {
       const sel   = document.getElementById(`ms-${safeKey}-${day}`);
@@ -2828,7 +2857,7 @@ async function saveModalEdit(safeKey, andApprove) {
 }
 
 async function removeAgentFromSchedule(safeKey) {
-  const agent = localAgents.find(a => a.key.replace(/[\s']/g,'_') === safeKey);
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (!agent) return;
   if (!confirm(`להסיר את ${agent.fullName} מהסידור?\nהנציג יסומן כלא מאושר ולא יופיע בסידור.`)) return;
   showLoading('מסיר...');
