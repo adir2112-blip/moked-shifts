@@ -159,7 +159,7 @@ select.filter-sel:focus{border-color:var(--accent)}
         <option value="">-- בחר פעילות --</option>
         <option>מובמנט</option><option>מאוחדת</option>
         <option>פריפיט שירות</option><option>פריפיט מכירות</option>
-        <option>מחלקת סחר</option><option>מעוף לעמית מכירות</option>
+        <option>מחלקת סחר</option><option>מעוף לעמית מכירות</option><option>הולנדיה</option>
       </select>
     </div>
     <div class="field-grp" id="movementTypeWrap" style="display:none">
@@ -262,7 +262,7 @@ const FB_URL = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.
 //  CONSTANTS
 // ══════════════════════════════════════════════════════════
 const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
-const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות'];
+const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות','הולנדיה'];
 const AGENT_PASS   = '12345';
 const MANAGER_PASS = 'Q1w2e3r4!';
 const ADMIN_PASS   = 'Adirgal123!';
@@ -281,6 +281,7 @@ const ACTIVITY_SHIFTS = {
   'פריפיט מכירות':    { single: '09:00–18:00' },
   'מחלקת סחר':        { single: '08:00–17:00' },
   'מעוף לעמית מכירות':{ single: '09:00–17:00' },
+  'הולנדיה':            { single: '09:00–17:00' },
   'מובמנט':           { shift8: '08:00–17:00', shift9: '09:00–18:00' }, // dual
 };
 
@@ -292,6 +293,7 @@ const ACTIVITY_COLORS = {
   'פריפיט מכירות':     { bg:'rgba(255,123,114,.15)',  border:'rgba(255,123,114,.4)',text:'#ff9492',  hex:'#ff7b72' },
   'מחלקת סחר':         { bg:'rgba(188,140,255,.15)',  border:'rgba(188,140,255,.4)',text:'#d2a8ff',  hex:'#bc8cff' },
   'מעוף לעמית מכירות': { bg:'rgba(255,212,59,.15)',   border:'rgba(255,212,59,.4)', text:'#ffd43b',  hex:'#ffd43b' },
+  'הולנדיה':            { bg:'rgba(20,200,200,.15)',   border:'rgba(20,200,200,.4)', text:'#14c8c8',  hex:'#14c8c8' },
 };
 function actColor(activity) { return ACTIVITY_COLORS[activity] || { bg:'rgba(139,148,158,.15)', border:'rgba(139,148,158,.3)', text:'var(--muted)', hex:'#8b949e' }; }
 
