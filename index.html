@@ -376,33 +376,35 @@ async function loadAgents() {
 
 // תור כתיבה
 let writeQueue = Promise.resolve();
-let _lastSavedKeys = null;
 
-async function saveAgents(arr) {
+async function saveAgents(arr, changedKeys) {
   localAgents = arr;
   writeQueue = writeQueue.then(async () => {
-    // בדוק אם שינוי בנציג בודד — אם כן עדכן רק אותו (מהיר + בטוח)
-    if (_lastSavedKeys && arr.length === _lastSavedKeys.size) {
-      const changed = arr.filter(a => {
-        const prev = _lastSavedSnapshot?.[a.key];
-        return !prev || JSON.stringify(prev) !== JSON.stringify(a);
-      });
-      if (changed.length === 1) {
-        await updateAgentInDB(changed[0]);
-        _lastSavedSnapshot = _lastSavedSnapshot || {};
-        _lastSavedSnapshot[changed[0].key] = changed[0];
-        return;
+    if (changedKeys && changedKeys.length > 0 && changedKeys.length <= 3) {
+      // עדכן רק את הנציגים שהשתנו — בטוח לכמה מנהלים
+      for (const key of changedKeys) {
+        const agent = arr.find(a => a.key === key);
+        if (agent) await updateAgentInDB(agent);
+        else {
+          // נמחק — מחק מ-Firebase
+          const fk = fbKey(key);
+          await fetch(FB_URL + '/agents/' + fk + '.json', {method:'DELETE'}).catch(()=>{});
+        }
       }
+    } else {
+      // שמור הכל (איפוס שבוע, ניקוי כפילויות וכו')
+      await writeBin(arr);
     }
-    // שמור הכל
-    await writeBin(arr);
-    _lastSavedKeys = new Set(arr.map(a=>a.key));
-    _lastSavedSnapshot = {};
-    arr.forEach(a => { _lastSavedSnapshot[a.key] = a; });
   }).catch(e => { throw e; });
   await writeQueue;
 }
-let _lastSavedSnapshot = null;
+
+// עדכן נציג בודד — הכי בטוח
+async function saveAgent(agent) {
+  const idx = localAgents.findIndex(a => a.key === agent.key);
+  if (idx >= 0) localAgents[idx] = agent; else localAgents.push(agent);
+  await updateAgentInDB(agent);
+}
 
 function agentKey(fn, ln, phone) {
   const base = `${fn.trim()} ${ln.trim()}`.toLowerCase();
@@ -455,10 +457,7 @@ async function getOrCreateAgent(fn, ln, activity) {
 }
 
 async function updateAgent(updated) {
-  // עדכן cache בלבד — אין טעינה מהרשת
-  const idx = localAgents.findIndex(a => a.key === updated.key);
-  if (idx >= 0) localAgents[idx] = updated; else localAgents.push(updated);
-  await saveAgents(localAgents);
+  await saveAgent(updated);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2095,10 +2094,10 @@ async function deleteAgentConstraint(key) {
   try {
     a.submitted = false; a.approved = false;
     DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
-    await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     showUndo(`🗑 אילוץ של ${a.fullName} נמחק`, async () => {
       a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
-      await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+      await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     });
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
@@ -2110,7 +2109,7 @@ async function setManagerShift(key, day, shift) {
   if (!agent.managerShift) agent.managerShift = {};
   // toggle — אם לוחצים שוב על אותו כפתור מבטלים
   agent.managerShift[day] = agent.managerShift[day] === shift ? '' : shift;
-  await saveAgents(localAgents);
+  await saveAgent(agent);
   renderMgAgents();
 }
 
@@ -2236,12 +2235,12 @@ async function saveAndApproveAgent(safeKey) {
 }
 
 async function approveAgent(key) {
-  showLoading('מאשר ושולח מייל...');
+  showLoading('מאשר...');
   try {
     const a = localAgents.find(x=>x.key===key);
     if (!a) return;
     a.approved = true;
-    await saveAgents(localAgents);
+    await saveAgent(a);
     addLog('אישור נציג', a.fullName);
     await renderMgAgents();
     updatePendingBadge();
@@ -2368,7 +2367,7 @@ async function revokeAgent(key) {
   showLoading('מעדכן...');
   try {
     const a = localAgents.find(x=>x.key===key);
-    if (a) { a.approved = false; await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge(); }
+    if (a) { a.approved = false; await saveAgent(a); await renderMgAgents(); updatePendingBadge(); }
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
@@ -2826,8 +2825,8 @@ function modalShiftToggle(safeKey, day, shift) {
   const btn9 = document.getElementById(`mb9-${safeKey}-${day}`);
   if (btn8) { btn8.style.borderColor = ms===s8?'var(--green)':'var(--border)'; btn8.style.background = ms===s8?'rgba(63,185,80,.2)':'var(--bg)'; btn8.style.color = ms===s8?'var(--green)':'var(--muted)'; }
   if (btn9) { btn9.style.borderColor = ms===s9?'var(--accent)':'var(--border)'; btn9.style.background = ms===s9?'rgba(88,166,255,.2)':'var(--bg)'; btn9.style.color = ms===s9?'var(--accent)':'var(--muted)'; }
-  // שמור לענן ורענן סידור
-  saveAgents(localAgents).catch(()=>{});
+  // שמור לענן
+  saveAgent(agent).catch(()=>{});
 }
 
 async function saveModalEdit(safeKey, andApprove) {
