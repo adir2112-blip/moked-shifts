@@ -377,23 +377,12 @@ async function loadAgents() {
 // תור כתיבה
 let writeQueue = Promise.resolve();
 
-async function saveAgents(arr, changedKeys) {
+async function saveAgents(arr) {
   localAgents = arr;
   writeQueue = writeQueue.then(async () => {
-    if (changedKeys && changedKeys.length > 0 && changedKeys.length <= 3) {
-      // עדכן רק את הנציגים שהשתנו — בטוח לכמה מנהלים
-      for (const key of changedKeys) {
-        const agent = arr.find(a => a.key === key);
-        if (agent) await updateAgentInDB(agent);
-        else {
-          // נמחק — מחק מ-Firebase
-          const fk = fbKey(key);
-          await fetch(FB_URL + '/agents/' + fk + '.json', {method:'DELETE'}).catch(()=>{});
-        }
-      }
-    } else {
-      // שמור הכל (איפוס שבוע, ניקוי כפילויות וכו')
-      await writeBin(arr);
+    // תמיד עדכן נציגים בודדים — לעולם לא כותב הכל (מונע מחיקות)
+    for (const agent of arr) {
+      if (agent && agent.key) await updateAgentInDB(agent);
     }
   }).catch(e => { throw e; });
   await writeQueue;
@@ -512,22 +501,24 @@ let userStatusFilter = '';
 
 async function deleteUser(safeKey, phone) {
   if (!confirm('למחוק את המשתמש?\nאם יתחבר שוב עם אותו טלפון — ייווצר מחדש כמשתמש חדש.')) return;
-  // מחק מ-localAgents
-  const before = localAgents.length;
-  localAgents = localAgents.filter(a => a.key.replace(/[\s']/g,'_') !== safeKey);
-  if (localAgents.length < before) {
-    showLoading('מוחק...');
-    try { await saveAgents(localAgents); } catch(e) { alert('שגיאה: ' + e.message); hideLoading(); return; }
-    hideLoading();
-  }
-  // מחק מ-localStorage
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
+  showLoading('מוחק...');
   try {
-    const users = JSON.parse(localStorage.getItem('moked_users')||'{}');
-    if (phone && users[phone]) { delete users[phone]; localStorage.setItem('moked_users', JSON.stringify(users)); }
-  } catch(e){}
-  addLog('מחיקת נציג', safeKey);
-  renderUsersTab();
-  updatePendingBadge();
+    // מחק מ-Firebase ישירות
+    if (agent) {
+      await fetch(FB_URL + '/agents/' + safeKey + '.json', {method:'DELETE'});
+      localAgents = localAgents.filter(a => fbKey(a.key) !== safeKey);
+    }
+    // מחק מ-localStorage
+    try {
+      const users = JSON.parse(localStorage.getItem('moked_users')||'{}');
+      if (phone && users[phone]) { delete users[phone]; localStorage.setItem('moked_users', JSON.stringify(users)); }
+    } catch(e){}
+    addLog('מחיקת נציג', agent?.fullName || safeKey);
+    renderUsersTab();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 function renderUsersTab() {
@@ -1447,12 +1438,13 @@ async function renderLogs() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  AUTO RESET — כל יום שני בשעה 18:00
+//  AUTO RESET — כל יום ראשון בשעה 18:00
 // ══════════════════════════════════════════════════════════
 function scheduleAutoReset() {
   const check = () => {
     const now = new Date();
-    if (now.getDay() === 1 && now.getHours() === 18 && now.getMinutes() === 0) {
+    // יום ראשון = 0 בישראל
+    if (now.getDay() === 0 && now.getHours() === 18 && now.getMinutes() === 0) {
       const lastReset = localStorage.getItem('moked_last_auto_reset');
       const todayKey  = now.toLocaleDateString('he-IL');
       if (lastReset !== todayKey) {
@@ -1461,20 +1453,21 @@ function scheduleAutoReset() {
       }
     }
   };
-  setInterval(check, 30000); // בדוק כל 30 שניות
+  setInterval(check, 30000);
 }
 
 async function autoResetWeek() {
   try {
-    localAgents.forEach(a => {
+    showLoading('מאפס שבוע חדש...');
+    for (const a of localAgents) {
       a.submitted = false; a.approved = false;
       DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
       if (a.managerShift) DAYS.forEach(d => a.managerShift[d] = '');
-    });
-    await saveAgents(localAgents);
+      await saveAgent(a);
+    }
     lastGeneratedFilter = null;
     lastBuiltSched = null;
-    addLog('אפס שבוע', 'איפוס אוטומטי — יום שני 18:00');
+    addLog('אפס שבוע', 'איפוס אוטומטי — יום ראשון 18:00');
     if (currentRole === 'manager') {
       renderMgSchedule();
       await renderMgAgents();
@@ -1482,6 +1475,7 @@ async function autoResetWeek() {
       alert('✅ הסידור אופס אוטומטית לשבוע חדש!');
     }
   } catch(e) { console.error('שגיאה באיפוס אוטומטי:', e); }
+  finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2705,11 +2699,11 @@ async function resetAllSubmissions() {
   if (!checkAdminPass('איפוס כל האילוצים')) return;
   showLoading('מאפס...');
   try {
-    localAgents.forEach(a => {
+    for (const a of localAgents) {
       a.submitted = false; a.approved = false;
-      DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
-    });
-    await saveAgents(localAgents);
+      DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
+      await saveAgent(a);
+    }
     addLog('אפס שבוע', 'איפוס ידני של כל האילוצים');
     lastGeneratedFilter = null;
     renderMgSchedule();
