@@ -242,6 +242,7 @@ select.filter-sel:focus{border-color:var(--accent)}
       <button class="tab-btn"        id="mgTab4" onclick="mgTab('stats',this)">📊 סטטיסטיקות</button>
       <button class="tab-btn"        id="mgTab5" onclick="mgTab('users',this)">👤 ניהול משתמשים</button>
       <button class="tab-btn"        id="mgTab6" onclick="mgTab('logs',this)">📋 לוגים</button>
+      <button class="tab-btn"        id="mgTab7" onclick="mgTab('scheduleHistory',this)">🗂 היסטוריית סידורים</button>
     </div>
     <div id="mgSchedulePane"></div>
     <div id="mgAgentsPane"  style="display:none"></div>
@@ -249,6 +250,7 @@ select.filter-sel:focus{border-color:var(--accent)}
     <div id="mgStatsPane"   style="display:none"></div>
     <div id="mgUsersPane"   style="display:none"></div>
     <div id="mgLogsPane"    style="display:none"></div>
+    <div id="mgScheduleHistoryPane" style="display:none"></div>
   </div>
 </div>
 
@@ -1298,6 +1300,7 @@ async function enterManager() {
     await renderMgAgents();
     updatePendingBadge();
     scheduleAutoReset();
+    scheduleWeeklySave();
     startAutoRefresh(async () => {
       if (!currentlyEditingKey) {
         try {
@@ -1333,17 +1336,254 @@ function mgTab(pane, btn) {
   document.getElementById('mgAgentsPane').style.display   = pane==='agents'   ? '' : 'none';
   document.getElementById('mgHistoryPane').style.display  = pane==='history'  ? '' : 'none';
   document.getElementById('mgStatsPane').style.display    = pane==='stats'    ? '' : 'none';
-  document.getElementById('mgUsersPane').style.display    = pane==='users'    ? '' : 'none';
-  document.getElementById('mgLogsPane').style.display     = pane==='logs'     ? '' : 'none';
+  document.getElementById('mgUsersPane').style.display               = pane==='users'           ? '' : 'none';
+  document.getElementById('mgLogsPane').style.display                = pane==='logs'            ? '' : 'none';
+  document.getElementById('mgScheduleHistoryPane').style.display     = pane==='scheduleHistory' ? '' : 'none';
+  document.getElementById('mgScheduleHistoryPane').style.display = pane==='scheduleHistory' ? '' : 'none';
   if (pane==='schedule') renderMgSchedule();
   if (pane==='agents')   renderMgAgents();
   if (pane==='history')  renderHistory();
   if (pane==='stats')    renderStats();
   if (pane==='users')    renderUsersTab();
-  if (pane==='logs')     renderLogs().catch(()=>{});
+  if (pane==='logs')            renderLogs().catch(()=>{});
+  if (pane==='scheduleHistory') renderScheduleHistory().catch(()=>{});
 }
 
 // ── Schedule Tab ──
+// ══════════════════════════════════════════════════════════
+//  SCHEDULE HISTORY — שמירה כל יום שישי + תצוגה
+// ══════════════════════════════════════════════════════════
+let schedHistActivityFilter = '';
+let schedHistWeekFilter     = '';
+
+function scheduleWeeklySave() {
+  // בדוק כל דקה אם יום שישי 23:59 — שמור snapshot
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getDay() === 5 && now.getHours() === 23 && now.getMinutes() === 59) {
+      const lastSave = localStorage.getItem('moked_last_hist_save');
+      const todayKey = now.toLocaleDateString('he-IL');
+      if (lastSave !== todayKey) {
+        localStorage.setItem('moked_last_hist_save', todayKey);
+        await saveWeeklySnapshot();
+      }
+    }
+  }, 60000);
+}
+
+async function saveWeeklySnapshot() {
+  try {
+    // בנה snapshot לכל פעילות
+    const weekLabel = WEEK_DATES['ראשון'].label + '–' + WEEK_DATES['שישי'].label;
+    const snapKey   = 'week_' + weekLabel.replace(/[./]/g,'_');
+    const snapshot  = { week: weekLabel, savedAt: new Date().toLocaleString('he-IL'), activities: {} };
+
+    ACTIVITIES.forEach(activity => {
+      const pool = localAgents.filter(a => a.submitted && a.approved && a.activity === activity);
+      if (!pool.length) return;
+      const sched = buildSchedule(pool);
+      snapshot.activities[activity] = {
+        agentCount: pool.length,
+        days: DAYS.map(day => ({
+          day,
+          date: WEEK_DATES[day].label,
+          shift8:   sched[day].shift8.map(a => a.name),
+          shift9:   sched[day].shift9.map(a => a.name),
+          digital8: sched[day].digital8.map(a => a.name),
+          digital9: sched[day].digital9.map(a => a.name),
+          dayOff:   sched[day].dayOff.map(a => a.name),
+          takanim:  sched[day].takanim?.total || 0
+        }))
+      };
+    });
+
+    await fetch(FB_URL + '/scheduleHistory/' + snapKey + '.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(snapshot)
+    });
+    addLog('שמירת היסטוריה', 'סידור שבוע ' + weekLabel + ' נשמר');
+    console.log('✅ snapshot שמור לשבוע', weekLabel);
+  } catch(e) { console.error('שגיאה בשמירת snapshot:', e); }
+}
+
+async function renderScheduleHistory() {
+  const pane = document.getElementById('mgScheduleHistoryPane');
+  pane.innerHTML = `<div class="empty"><div class="spinner"></div><p>טוען היסטוריה...</p></div>`;
+
+  let allSnaps = {};
+  try {
+    const res  = await fetch(FB_URL + '/scheduleHistory.json');
+    allSnaps   = await res.json() || {};
+  } catch(e) { pane.innerHTML = `<div class="empty"><p>שגיאה בטעינה</p></div>`; return; }
+
+  const snaps = Object.values(allSnaps).filter(Boolean).sort((a,b) => b.week.localeCompare(a.week));
+
+  if (!snaps.length) {
+    pane.innerHTML = `
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div class="card-title" style="margin:0">🗂 היסטוריית סידורים</div>
+          <button class="btn btn-success btn-sm" onclick="saveSnapshotManually()">💾 שמור סידור נוכחי</button>
+        </div>
+        <p style="color:var(--muted);font-size:.85rem">אין היסטוריית סידורים עדיין.<br>לחץ "שמור סידור נוכחי" כדי לשמור את הסידור הנוכחי.</p>
+      </div>`;
+    return;
+  }
+
+  // בנה רשימת שבועות ופעילויות לסינון
+  const weeks      = [...new Set(snaps.map(s => s.week))];
+  const activities = [...new Set(snaps.flatMap(s => Object.keys(s.activities||{})))];
+
+  const weekOpts = weeks.map(w =>
+    `<option value="${w}" ${schedHistWeekFilter===w?'selected':''}>${w}</option>`
+  ).join('');
+  const actOpts = activities.map(a =>
+    `<option value="${a}" ${schedHistActivityFilter===a?'selected':''}>${a}</option>`
+  ).join('');
+
+  // סנן
+  let filtered = snaps;
+  if (schedHistWeekFilter)     filtered = filtered.filter(s => s.week === schedHistWeekFilter);
+
+  // הצג כרטיסי סידור
+  const cards = filtered.map(snap => {
+    const actKeys = Object.keys(snap.activities||{}).filter(a => !schedHistActivityFilter || a === schedHistActivityFilter);
+    if (!actKeys.length) return '';
+
+    const actCards = actKeys.map(activity => {
+      const ac       = actColor(activity);
+      const data     = snap.activities[activity];
+      const actShift = ACTIVITY_SHIFTS[activity];
+      const isSingle = !!actShift?.single;
+      const isMovement = activity === 'מובמנט';
+      const hasDigital = isMovement || actShift?.hasDigital;
+
+      const days = data.days || [];
+
+      // כותרות ימים
+      const hdr = days.map(d =>
+        `<th class="sch-th-day">יום ${d.day}<span class="th-date">${d.date}</span></th>`
+      ).join('');
+
+      // פונקציית pills
+      const pills = (names, cls) => names.length
+        ? names.map(n => `<span class="${cls}" style="cursor:default">${n}</span>`).join('')
+        : `<span class="no-one">—</span>`;
+
+      // שורה 08
+      const label8 = isSingle
+        ? `☀️<br>${(actShift.single||'').replace('–','–<br>')}`
+        : `☀️<br>שיחות<br>08:00<br>–<br>17:00`;
+      const row8 = days.map(d => `<td class="sch-td td-8">${pills(d.shift8||[],'p8')}</td>`).join('');
+
+      // שורה 09 — רק למובמנט
+      const row9HTML = !isSingle
+        ? `<tr><td class="sch-row-label lbl-9">🌤️<br>שיחות<br>09:00<br>–<br>18:00</td>${days.map(d=>`<td class="sch-td td-9">${pills(d.shift9||[],'p9')}</td>`).join('')}</tr>`
+        : '';
+
+      // שורות דיגיטל
+      let digitalRows = '';
+      if (hasDigital) {
+        const rowD8 = days.map(d => `<td class="sch-td td-d8">${pills(d.digital8||[],'pd8')}</td>`).join('');
+        if (isMovement) {
+          const rowD9 = days.map(d => `<td class="sch-td td-d9">${pills(d.digital9||[],'pd9')}</td>`).join('');
+          digitalRows = `
+            <tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>08:00<br>–<br>17:00</td>${rowD8}</tr>
+            <tr><td class="sch-row-label lbl-d9">💻<br>דיגיטל<br>09:00<br>–<br>18:00</td>${rowD9}</tr>`;
+        } else {
+          digitalRows = `<tr><td class="sch-row-label lbl-d8">💻<br>דיגיטל<br>09:00<br>–<br>16:30</td>${rowD8}</tr>`;
+        }
+      }
+
+      // שורת חופש
+      const rowOff = days.map(d => `<td class="sch-td td-off">${pills(d.dayOff||[],'poff')}</td>`).join('');
+
+      // שורת תקנים
+      const fmtT = n => { if(!n) return '—'; const r=Math.round(n*4)/4; return r%1===0?r.toString():r.toFixed(2).replace(/\.?0+$/,''); };
+      const rowTakanim = days.map(d => {
+        const tot = d.takanim||0;
+        const color = tot>=4?'var(--green)':tot>=2?'var(--warn)':'var(--danger)';
+        return `<td class="sch-td" style="text-align:center;vertical-align:middle;background:rgba(255,255,255,.03)">
+          <div style="font-size:1rem;font-weight:900;color:${color}">${fmtT(tot)}</div>
+          <div style="font-size:.65rem;color:var(--muted)">תקנים</div>
+        </td>`;
+      }).join('');
+
+      return `
+        <div style="margin-bottom:20px">
+          <div style="background:${ac.bg};border:1px solid ${ac.border};border-radius:8px 8px 0 0;padding:10px 14px;display:flex;align-items:center;gap:10px">
+            <span style="color:${ac.text};font-weight:700">🏷 ${activity}</span>
+            <span style="color:var(--muted);font-size:.78rem">${data.agentCount} נציגים</span>
+          </div>
+          <div class="sch-wrapper" style="border:1px solid ${ac.border};border-top:none;border-radius:0 0 8px 8px;background:var(--surface);padding:12px">
+            <table class="sch-table">
+              <thead><tr><th class="sch-th-label"></th>${hdr}</tr></thead>
+              <tbody>
+                <tr><td class="sch-row-label lbl-8">${label8}</td>${row8}</tr>
+                ${row9HTML}
+                ${digitalRows}
+                <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowOff}</tr>
+                <tr>
+                  <td class="sch-row-label" style="background:rgba(255,255,255,.04);color:var(--muted);font-size:.7rem">📊<br>תקנים</td>
+                  ${rowTakanim}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }).join('');
+
+    return actCards ? `
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="font-weight:700;font-size:.95rem">📅 שבוע ${snap.week}</div>
+          <span style="color:var(--muted);font-size:.78rem">נשמר: ${snap.savedAt||'—'}</span>
+          <button class="btn btn-sm btn-success" onclick="saveSnapshotManually()" style="font-size:.75rem;margin-right:auto">💾 שמור עכשיו</button>
+        </div>
+        ${actCards}
+      </div>` : '';
+  }).filter(Boolean).join('');
+
+  pane.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">🗂 היסטוריית סידורים</div>
+        <button class="btn btn-success btn-sm" onclick="saveSnapshotManually()">💾 שמור סידור נוכחי</button>
+        <span style="color:var(--muted);font-size:.82rem;margin-right:auto">${snaps.length} שבועות שמורים</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">📅 שבוע</label>
+          <select id="histWeekSel" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer;min-width:160px">
+            <option value="">כל השבועות</option>${weekOpts}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">🏢 פעילות</label>
+          <select id="histActSel" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer;min-width:160px">
+            <option value="">כל הפעילויות</option>${actOpts}
+          </select>
+        </div>
+        <div style="margin-top:18px">
+          <button class="btn btn-primary btn-sm" onclick="schedHistWeekFilter=document.getElementById('histWeekSel').value;schedHistActivityFilter=document.getElementById('histActSel').value;renderScheduleHistory()">🔍 הצג</button>
+          <button class="btn btn-sm" style="background:var(--s2);color:var(--muted);margin-right:6px" onclick="schedHistWeekFilter='';schedHistActivityFilter='';renderScheduleHistory()">✕ נקה</button>
+        </div>
+      </div>
+    </div>
+    ${cards || `<div class="empty"><p>אין נתונים לפילטר שנבחר</p></div>`}`;
+}
+
+async function saveSnapshotManually() {
+  showLoading('שומר סידור...');
+  try {
+    await saveWeeklySnapshot();
+    await renderScheduleHistory();
+    alert('✅ הסידור נשמר בהיסטוריה!');
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 // ══════════════════════════════════════════════════════════
 //  ADMIN PASSWORD CHECK
 // ══════════════════════════════════════════════════════════
