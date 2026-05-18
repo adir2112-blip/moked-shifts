@@ -258,7 +258,8 @@ select.filter-sel:focus{border-color:var(--accent)}
 // ══════════════════════════════════════════════════════════
 //  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════════
-const FB_URL = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.app';
+const FB_URL   = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.app';
+const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
 
 // ══════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -1301,6 +1302,7 @@ async function enterManager() {
     updatePendingBadge();
     scheduleAutoReset();
     scheduleWeeklySave();
+    scheduleWAReminder();
     startAutoRefresh(async () => {
       if (!currentlyEditingKey) {
         try {
@@ -1350,6 +1352,80 @@ function mgTab(pane, btn) {
 }
 
 // ── Schedule Tab ──
+// ══════════════════════════════════════════════════════════
+//  WHATSAPP REMINDERS
+// ══════════════════════════════════════════════════════════
+function formatPhoneForWA(phone) {
+  if (!phone) return null;
+  const clean = phone.replace(/[^0-9]/g, '');
+  if (clean.startsWith('972')) return clean;
+  if (clean.startsWith('0'))   return '972' + clean.slice(1);
+  return '972' + clean;
+}
+
+async function sendWAMessage(phone, message) {
+  const formatted = formatPhoneForWA(phone);
+  if (!formatted) return { ok: false, error: 'אין טלפון' };
+  try {
+    const res = await fetch(WA_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: formatted, message })
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+async function sendReminderToAll() {
+  // מצא נציגים שלא הגישו ויש להם טלפון
+  const missing = localAgents.filter(a => !a.submitted && a.phone);
+  if (!missing.length) { alert('כל הנציגים עם טלפון כבר הגישו אילוצים!'); return; }
+
+  if (!confirm(`לשלוח תזכורת WhatsApp ל-${missing.length} נציגים שטרם הגישו?`)) return;
+
+  showLoading(`שולח תזכורות ל-${missing.length} נציגים...`);
+  let sent = 0, failed = 0;
+  try {
+    for (const agent of missing) {
+      const msg = `שלום ${agent.firstName}! 👋\n\nתזכורת: טרם שלחת אילוצים לשבוע הבא.\nאנא היכנס למערכת וסיים את ההגשה:\nhttps://adir2112-blip.github.io/moked-shifts\n\nתודה 🙏`;
+      const result = await sendWAMessage(agent.phone, msg);
+      if (result.ok) sent++;
+      else { failed++; console.warn('נכשל עבור', agent.fullName, result.error); }
+    }
+    addLog('תזכורת WhatsApp', `נשלח ל-${sent}, נכשל ${failed}`);
+    alert(`✅ נשלח ל-${sent} נציגים${failed ? `\n❌ נכשל עבור ${failed}` : ''}`);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+// בדיקה אוטומטית — כל יום ב' עד 12:00
+function scheduleWAReminder() {
+  setInterval(async () => {
+    const now = new Date();
+    // יום שני = 1, שעה 11:59
+    if (now.getDay() === 1 && now.getHours() === 11 && now.getMinutes() === 59) {
+      const lastReminder = localStorage.getItem('moked_last_wa_reminder');
+      const todayKey     = now.toLocaleDateString('he-IL');
+      if (lastReminder !== todayKey) {
+        localStorage.setItem('moked_last_wa_reminder', todayKey);
+        await loadAgents();
+        const missing = localAgents.filter(a => !a.submitted && a.phone);
+        if (missing.length) {
+          console.log(`שולח תזכורות אוטומטיות ל-${missing.length} נציגים...`);
+          for (const agent of missing) {
+            const msg = `שלום ${agent.firstName}! 👋\n\nתזכורת: טרם שלחת אילוצים לשבוע הבא.\nאנא היכנס למערכת וסיים את ההגשה:\nhttps://adir2112-blip.github.io/moked-shifts\n\nתודה 🙏`;
+            await sendWAMessage(agent.phone, msg);
+          }
+          addLog('תזכורת אוטומטית', `נשלחו תזכורות ל-${missing.length} נציגים`);
+        }
+      }
+    }
+  }, 60000);
+}
+
 // ══════════════════════════════════════════════════════════
 //  SCHEDULE HISTORY — שמירה כל יום שישי + תצוגה
 // ══════════════════════════════════════════════════════════
@@ -2241,6 +2317,7 @@ async function renderMgAgents() {
         ${addManualBtn}
         ${clearPendingBtn}
         ${deleteAgentsBtn}
+        <button class="btn btn-sm" style="background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)" onclick="sendReminderToAll()">📱 שלח תזכורת WhatsApp</button>
       </div>
       ${statusFilters}
       <div style="margin-top:14px"></div>
