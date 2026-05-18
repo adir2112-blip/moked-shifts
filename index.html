@@ -2109,7 +2109,7 @@ function renderScheduleTable(sched, total, actFilter) {
   const pills = (list, cls) => list.length
     ? list.map(a => {
         const act = (!actFilter && a.activity) ? `<span class="pact"> · ${a.activity}</span>` : '';
-        const tm  = a.time ? `<span class="pact"> ⏰${a.time}</span>` : '';
+        const tm  = a.time ? `<span class="pact"> ${a.constraintType==='early'?'🏃':'😴'}${a.time}</span>` : '';
         const agentObj = localAgents.find(x => x.fullName === a.name);
         const safeKey  = agentObj ? fbKey(agentObj.key) : '';
         const clickable = safeKey ? `onclick="openScheduleEdit('${safeKey}')" style="cursor:pointer" title="לחץ לעריכה"` : '';
