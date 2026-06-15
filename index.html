@@ -2292,6 +2292,10 @@ async function renderMgAgents() {
     ? `<button class="btn btn-primary btn-sm" onclick="openAddManualAgent('${mgAgentsFilter}')">➕ הוסף נציג ידני</button>`
     : '';
 
+  const approveAllBtn = pending > 0
+    ? `<button class="btn btn-success btn-sm" onclick="approveAllPending('${mgAgentsFilter}')">✅ אשר הכל (${pending})</button>`
+    : '';
+
   const statusFilters = `
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${[['','הכל'],['pending','⏳ ממתינים'],['approved','✅ אושרו'],['rejected','✖ נדחו']].map(([v,l]) =>
@@ -2315,6 +2319,7 @@ async function renderMgAgents() {
         </select>
         <span style="color:var(--muted);font-size:.82rem">${visible.length} מוצגים</span>
         ${addManualBtn}
+        ${approveAllBtn}
         ${clearPendingBtn}
         ${deleteAgentsBtn}
         <button class="btn btn-sm" style="background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)" onclick="sendReminderToAll()">📱 שלח תזכורת WhatsApp</button>
@@ -2542,6 +2547,26 @@ async function saveAndApproveAgent(safeKey) {
     await renderMgAgents();
     updatePendingBadge();
   } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function approveAllPending(activityFilter) {
+  const toApprove = localAgents.filter(a =>
+    a.submitted && !a.approved &&
+    (!activityFilter || a.activity === activityFilter)
+  );
+  if (!toApprove.length) { alert('אין נציגים ממתינים לאישור'); return; }
+  if (!confirm(`לאשר את כל ${toApprove.length} הנציגים הממתינים?`)) return;
+  showLoading(`מאשר ${toApprove.length} נציגים...`);
+  try {
+    for (const a of toApprove) {
+      a.approved = true;
+      await saveAgent(a);
+    }
+    addLog('אישור המוני', `אושרו ${toApprove.length} נציגים${activityFilter?' — '+activityFilter:''}`);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
