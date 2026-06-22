@@ -136,7 +136,39 @@ select.filter-sel:focus{border-color:var(--accent)}
 .agent-card{padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .18s;font-size:.84rem;font-weight:600;color:var(--text)}
 .agent-card:hover{border-color:var(--accent);background:rgba(88,166,255,.08);transform:translateY(-2px)}
 .agent-card .initials{width:38px;height:38px;border-radius:50%;background:rgba(88,166,255,.15);color:var(--accent);font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
-@media(max-width:600px){.main{padding:16px 12px}.login-box{padding:28px 20px}}
+@media(max-width:768px){
+  .main{padding:12px 10px}
+  .login-box{padding:24px 16px}
+  .tabs{gap:4px;padding:4px;border-radius:10px}
+  .tab-btn{padding:7px 10px;font-size:.78rem;border-radius:8px}
+  .card{padding:14px 12px;border-radius:12px}
+  .stats-bar{gap:6px}
+  .stat-chip{padding:5px 10px;font-size:.78rem}
+  .agents-grid{grid-template-columns:1fr}
+  .filter-bar{gap:8px}
+  select.filter-sel{min-width:unset;width:100%}
+  .download-bar{gap:6px}
+  .download-bar .btn{flex:1;padding:8px 6px;font-size:.78rem}
+  .sch-table{font-size:.72rem}
+  .sch-td{padding:6px 4px;min-width:80px}
+  .p8,.p9,.poff,.pd8,.pd9{padding:2px 5px;font-size:.7rem}
+  .week-table{font-size:.82rem}
+  .week-table td:first-child{width:70px;padding-right:8px}
+  select.csel{font-size:.8rem;padding:4px 6px}
+  .agent-card{padding:10px 6px;font-size:.78rem}
+  .agent-card .initials{width:32px;height:32px;font-size:.8rem}
+  #deptFilterRow{gap:6px}
+  .dept-btn{padding:6px 10px;font-size:.78rem}
+  .pin-key{padding:12px;font-size:1.1rem}
+  .modal-box{padding:18px;border-radius:14px}
+  .approve-btns{gap:4px}
+  .approve-btns .btn{font-size:.75rem;padding:5px 10px}
+}
+@media(max-width:400px){
+  .tab-btn{padding:6px 7px;font-size:.72rem}
+  .sch-td{min-width:65px}
+  .p8,.p9,.poff{font-size:.65rem;padding:2px 4px}
+}
 </style>
 </head>
 <body>
@@ -1330,7 +1362,11 @@ async function renderAgentContent() {
 }
 
 function renderAgentEditForm(agent, container) {
-  const rows = DAYS.map(day => {
+  // הצג רק ימי עבודה מוגדרים למנהל (workDays), או כל הימים אם לא הוגדר
+  const activeDays = (agent.workDays && agent.workDays.length) ? DAYS.filter(d => agent.workDays.includes(d)) : DAYS;
+  const isMobile = window.innerWidth <= 768;
+
+  const rows = activeDays.map(day => {
     const c   = agent.constraints[day]||{type:'none',time:''};
     const val = c.type||'none';
     const opts = COPTS.map(o=>`<option value="${o.v}" ${val===o.v?'selected':''}>${o.e} ${o.l}</option>`).join('');
@@ -1338,7 +1374,22 @@ function renderAgentEditForm(agent, container) {
     if (val==='late')  timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
     if (val==='early') timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
     const showNote = val !== 'none';
-    const noteH = showNote ? `<input type="text" placeholder="הערה (אופציונלי)" maxlength="60" value="${(c.note||'').replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:4px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.75rem;padding:3px 8px;outline:none"/>` : '';
+    const noteH = showNote ? `<input type="text" placeholder="הערה (חובה)" maxlength="60" value="${(c.note||'').replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem;padding:7px 10px;outline:none"/>` : '';
+
+    if (isMobile) {
+      // מובייל — כרטיס לכל יום
+      const borderColor = val==='off'?'rgba(255,59,48,.3)':val==='late'?'rgba(255,149,0,.3)':val==='early'?'rgba(52,199,89,.3)':'var(--border)';
+      return `<div style="background:var(--surface);border:1.5px solid ${borderColor};border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:700;font-size:.95rem">יום ${day}</span>
+          <span style="font-size:.78rem;color:var(--muted)">${WEEK_DATES[day].label}</span>
+        </div>
+        <select class="csel v-${val}" id="csel-${day}" onchange="agentSetType('${day}',this.value)" style="width:100%;max-width:none;font-size:.9rem;padding:8px 10px">${opts}</select>
+        <div id="tcell-${day}">${timeH}</div>
+        ${noteH}
+      </div>`;
+    }
+
     return `<tr>
       <td>יום ${day}<br><span style="font-size:.72rem;color:var(--muted);font-weight:400">${WEEK_DATES[day].label}</span></td>
       <td><select class="csel v-${val}" id="csel-${day}" onchange="agentSetType('${day}',this.value)">${opts}</select></td>
@@ -1346,16 +1397,17 @@ function renderAgentEditForm(agent, container) {
     </tr>`;
   }).join('');
 
+  const tableOrCards = isMobile
+    ? `<div style="margin-bottom:16px">${rows}</div>`
+    : `<table class="week-table"><thead><tr><th>יום</th><th>אילוץ</th><th>שעה</th></tr></thead><tbody>${rows}</tbody></table>`;
+
   container.innerHTML = `
     <div class="card">
       <div class="card-title">📋 אילוצים לשבוע הבא &nbsp;<span style="color:var(--muted);font-size:.82rem;font-weight:400">${WEEK_DATES['ראשון'].label} – ${WEEK_DATES['שישי'].label}</span></div>
       <p style="color:var(--muted);font-size:.84rem;margin-bottom:16px">בחר אילוץ לכל יום. תוכל לשלוח <strong style="color:var(--text)">פעם אחת בלבד</strong> לשבוע זה.</p>
-      <table class="week-table">
-        <thead><tr><th>יום</th><th>אילוץ</th><th>שעה</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+      ${tableOrCards}
       <div style="margin-top:20px;display:flex;justify-content:flex-end">
-        <button class="btn btn-primary" onclick="agentShowReview()" style="padding:11px 30px;font-size:1rem">סקירה לפני שליחה ←</button>
+        <button class="btn btn-primary btn-full" onclick="agentShowReview()" style="padding:14px 30px;font-size:1rem">סקירה לפני שליחה ←</button>
       </div>
     </div>`;
 }
@@ -1365,17 +1417,21 @@ function agentShowReview() {
   const draft = {};
   let missingNote = [];
 
-  DAYS.forEach(day => {
+  const activeDaysR = (() => { try { const a=localAgents.find(x=>x.key===currentUser?.agentKey); return (a?.workDays?.length)?DAYS.filter(d=>a.workDays.includes(d)):DAYS; } catch(e){return DAYS;} })();
+  activeDaysR.forEach(day => {
     const sel  = document.getElementById('csel-'+day);
     const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
     const ninp = document.getElementById('note-'+day);
     const type = sel ? sel.value : 'none';
     const note = ninp ? ninp.value.trim() : (agentDraft[day]?.note||'');
     draft[day] = { type, time: tinp ? tinp.value : '', note };
-    // בדוק הערה חובה
     if ((type==='off'||type==='late'||type==='early') && !note) {
       missingNote.push(day);
     }
+  });
+  // ימים שלא נבחרו — אפס אוטומטית
+  DAYS.filter(d => !activeDaysR.includes(d)).forEach(day => {
+    draft[day] = { type:'none', time:'', note:'' };
   });
 
   // הצג שגיאה אם חסרות הערות
