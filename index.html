@@ -125,6 +125,17 @@ select.filter-sel:focus{border-color:var(--accent)}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-txt{color:var(--muted);font-size:.9rem}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-key{padding:15px;border-radius:12px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-family:inherit;font-size:1.2rem;font-weight:700;cursor:pointer;transition:all .1s}
+.pin-key:active{transform:scale(.92);background:var(--border)}
+.pin-key-del{color:var(--muted);font-size:1rem}
+.pin-key-cancel{color:var(--muted);font-size:.82rem}
+.dept-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;transition:all .18s}
+.dept-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.agent-card{padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .18s;font-size:.84rem;font-weight:600;color:var(--text)}
+.agent-card:hover{border-color:var(--accent);background:rgba(88,166,255,.08);transform:translateY(-2px)}
+.agent-card .initials{width:38px;height:38px;border-radius:50%;background:rgba(88,166,255,.15);color:var(--accent);font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
 @media(max-width:600px){.main{padding:16px 12px}.login-box{padding:28px 20px}}
 </style>
 </head>
@@ -138,56 +149,103 @@ select.filter-sel:focus{border-color:var(--accent)}
 
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
-  <div class="login-box">
-    <h1>🖥️ מוקד – סידור עבודה</h1>
-    <p class="sub">התחבר כנציג או כמנהל</p>
-    <div class="login-role-tabs">
-      <button class="role-tab active" id="tabAgent"   onclick="setRole('agent')">👤 נציג</button>
-      <button class="role-tab"        id="tabManager" onclick="setRole('manager')">🔑 מנהל</button>
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
+
+    <!-- בחירת תפקיד -->
+    <div style="width:100%;max-width:600px">
+      <div style="text-align:center;margin-bottom:24px">
+        <h1 style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">🖥️ מוקד – סידור עבודה</h1>
+        <p style="color:var(--muted);font-size:.88rem">התחבר למערכת</p>
+      </div>
+
+      <div class="login-role-tabs" style="max-width:300px;margin:0 auto 24px">
+        <button class="role-tab active" id="tabAgent"   onclick="setRole('agent')">👤 נציג</button>
+        <button class="role-tab"        id="tabManager" onclick="setRole('manager')">🔑 מנהל</button>
+      </div>
+
+      <!-- נציג: בחירת מחלקה + grid -->
+      <div id="agentLoginSection">
+        <div id="deptFilterRow" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px"></div>
+        <input type="text" id="agentSearchInp" placeholder="🔍 הקש את שמך..."
+          oninput="renderAgentGrid()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;padding:10px 14px;outline:none;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.06)"/>
+        <p style="font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:12px">לאחר בחירת שמך תתבקש להזין 4 ספרות אחרונות של ת"ז</p>
+        <div id="agentGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:350px;overflow-y:auto"></div>
+        <div class="err-msg" id="loginErr" style="margin-top:10px"></div>
+      </div>
+
+      <!-- מנהל: מייל + סיסמה -->
+      <div id="managerLoginSection" style="display:none;max-width:360px;margin:0 auto">
+        <div class="login-box" style="padding:28px">
+          <div class="field-grp">
+            <label>מייל</label>
+            <input class="inp" type="email" id="loginEmail" placeholder="manager@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+          </div>
+          <div class="field-grp">
+            <label>סיסמה</label>
+            <input class="inp" type="password" id="loginPass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+          </div>
+          <div class="err-msg" id="loginErrMgr"></div>
+          <button class="btn btn-primary btn-full" onclick="doLogin()">כניסה →</button>
+        </div>
+      </div>
+
+      <p style="text-align:center;color:var(--muted);font-size:.78rem;font-weight:700;margin-top:24px">✦ נבנה על ידי אדיר לוי ✦</p>
     </div>
-    <div class="field-grp">
-      <label>שם פרטי</label>
-      <input class="inp" id="loginFirst" placeholder="ישראל" onkeydown="if(event.key==='Enter')doLogin()"/>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div id="pinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px 28px;width:100%;max-width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div id="pinAgentName" style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:22px">הזן קוד PIN</div>
+    <div id="pinDots" style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">
+      <div id="dot0" class="pin-dot"></div><div id="dot1" class="pin-dot"></div>
+      <div id="dot2" class="pin-dot"></div><div id="dot3" class="pin-dot"></div>
     </div>
-    <div class="field-grp">
-      <label>שם משפחה</label>
-      <input class="inp" id="loginLast" placeholder="ישראלי" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+      <button class="pin-key" onclick="pinPress(1)">1</button>
+      <button class="pin-key" onclick="pinPress(2)">2</button>
+      <button class="pin-key" onclick="pinPress(3)">3</button>
+      <button class="pin-key" onclick="pinPress(4)">4</button>
+      <button class="pin-key" onclick="pinPress(5)">5</button>
+      <button class="pin-key" onclick="pinPress(6)">6</button>
+      <button class="pin-key" onclick="pinPress(7)">7</button>
+      <button class="pin-key" onclick="pinPress(8)">8</button>
+      <button class="pin-key" onclick="pinPress(9)">9</button>
+      <button class="pin-key pin-key-del" onclick="pinPress('del')">⌫</button>
+      <button class="pin-key" onclick="pinPress(0)">0</button>
+      <button class="pin-key pin-key-cancel" onclick="closePinModal()">ביטול</button>
     </div>
-    <div class="field-grp" id="activityFieldWrap">
-      <label>פעילות</label>
-      <select class="inp" id="loginActivity" onchange="onActivityChange()">
-        <option value="">-- בחר פעילות --</option>
-        <option>מובמנט</option><option>מאוחדת</option>
-        <option>פריפיט שירות</option><option>פריפיט מכירות</option>
-        <option>מחלקת סחר</option><option>מעוף לעמית מכירות</option><option>הולנדיה</option>
-      </select>
-    </div>
-    <div class="field-grp" id="movementTypeWrap" style="display:none">
-      <label>סוג נציג במובמנט</label>
-      <select class="inp" id="loginMovementType">
-        <option value="שיחות">📞 נציג שיחות</option>
-        <option value="דיגיטל">💻 נציג דיגיטל</option>
-      </select>
-    </div>
-    <div class="field-grp" id="emailFieldWrap">
-      <label>כתובת מייל (לקבלת סידור)</label>
-      <input class="inp" type="email" id="loginEmail" placeholder="israel@example.com" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <div class="field-grp" id="phoneFieldWrap">
-      <label>📱 מספר נייד (לזיהוי)</label>
-      <input class="inp" type="tel" id="loginPhone" placeholder="050-1234567" onkeydown="if(event.key==='Enter')doLogin()" oninput="autoFillFromPhone(this.value)"/>
-    </div>
-    <div class="field-grp">
-      <label>סיסמה</label>
-      <input class="inp" id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <div class="err-msg" id="loginErr"></div>
-    <button class="btn btn-primary btn-full" onclick="doLogin()">כניסה →</button>
-    <p style="color:var(--muted);font-size:.82rem;font-weight:700;margin-top:20px;letter-spacing:.3px">✦ נבנה על ידי אדיר לוי ✦</p>
+    <div id="pinError" style="display:none;color:var(--danger);font-size:.82rem;margin-top:8px">❌ קוד שגוי</div>
   </div>
 </div>
 
 <!-- EDIT MODAL (from schedule) -->
+<!-- MOVEMENT TYPE POPUP -->
+<div id="movementModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:9998;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px 28px;width:100%;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:1.4rem;margin-bottom:8px">📞💻</div>
+    <div id="movementAgentName" style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px"></div>
+    <div style="font-size:.85rem;color:var(--muted);margin-bottom:24px">בחר את סוג התפקיד שלך</div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="selectMovementType('שיחות')"
+        style="flex:1;padding:16px 8px;border-radius:12px;border:2px solid var(--border);background:var(--s2);color:var(--text);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .18s"
+        onmouseover="this.style.borderColor='var(--green)';this.style.background='rgba(63,185,80,.08)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--s2)'">
+        📞<br>שיחות
+      </button>
+      <button onclick="selectMovementType('דיגיטל')"
+        style="flex:1;padding:16px 8px;border-radius:12px;border:2px solid var(--border);background:var(--s2);color:var(--text);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .18s"
+        onmouseover="this.style.borderColor='var(--purple)';this.style.background='rgba(188,140,255,.08)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--s2)'">
+        💻<br>דיגיטל
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="editModal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeScheduleEdit()">
   <div class="modal-box">
     <div class="modal-title">
@@ -243,6 +301,7 @@ select.filter-sel:focus{border-color:var(--accent)}
       <button class="tab-btn"        id="mgTab5" onclick="mgTab('users',this)">👤 ניהול משתמשים</button>
       <button class="tab-btn"        id="mgTab6" onclick="mgTab('logs',this)">📋 לוגים</button>
       <button class="tab-btn"        id="mgTab7" onclick="mgTab('scheduleHistory',this)">🗂 היסטוריית סידורים</button>
+      <button class="tab-btn"        id="mgTab8" onclick="mgTab('managers',this)">🔑 מנהלים</button>
     </div>
     <div id="mgSchedulePane"></div>
     <div id="mgAgentsPane"  style="display:none"></div>
@@ -251,6 +310,7 @@ select.filter-sel:focus{border-color:var(--accent)}
     <div id="mgUsersPane"   style="display:none"></div>
     <div id="mgLogsPane"    style="display:none"></div>
     <div id="mgScheduleHistoryPane" style="display:none"></div>
+    <div id="mgManagersPane"       style="display:none"></div>
   </div>
 </div>
 
@@ -407,6 +467,11 @@ function agentKey(fn, ln, phone) {
 async function getOrCreateAgent(fn, ln, activity) {
   // השתמש ב-cache — אל תטען מהרשת בכל פעם
   if (!localAgents.length) await loadAgents();
+  // אם כניסה דרך grid — השתמש ב-key הקיים
+  if (currentUser?.agentKey) {
+    const a = localAgents.find(x => x.key === currentUser.agentKey);
+    if (a) return a;
+  }
   const key = agentKey(fn, ln, currentUser?.phone || '');
   let agent = localAgents.find(a => a.key === key);
   // בדוק כפילות לפי שם מלא — מחק ידניות אם יש phone_
@@ -434,8 +499,9 @@ async function getOrCreateAgent(fn, ln, activity) {
     await saveAgents(localAgents);
   } else {
     let changed = false;
-    if (currentUser && currentUser.movementType !== undefined && agent.movementType !== currentUser.movementType) {
-      agent.movementType = currentUser.movementType || null; changed = true;
+    // עדכן movementType רק אם נציג בחר בעצמו (לא אם הוגדר ע"י מנהל)
+    if (currentUser && currentUser.movementType && agent.movementType !== currentUser.movementType) {
+      agent.movementType = currentUser.movementType; changed = true;
     }
     if (currentUser && activity && agent.activity !== activity) {
       agent.activity = activity; changed = true;
@@ -443,7 +509,7 @@ async function getOrCreateAgent(fn, ln, activity) {
     if (currentUser && currentUser.email && agent.email !== currentUser.email) {
       agent.email = currentUser.email; changed = true;
     }
-    if (changed) await saveAgents(localAgents);
+    if (changed) await saveAgent(agent);
   }
   return agent;
 }
@@ -596,6 +662,8 @@ function renderUsersTab() {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div class="card-title" style="margin:0">👤 ניהול משתמשים</div>
         <button class="btn btn-primary btn-sm" onclick="openAddAgentByManager()">➕ הוסף נציג</button>
+        <button class="btn btn-sm" style="background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)" onclick="document.getElementById('pinCsvInput').click()">📥 ייבוא PIN מ-CSV</button>
+        <input type="file" id="pinCsvInput" accept=".csv" style="display:none" onchange="importPinCsv(this)"/>
         <span style="color:var(--muted);font-size:.82rem">${users.length} משתמשים</span>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
@@ -815,6 +883,11 @@ function openEditUser(safeKey, phone) {
           <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">מייל</label>
           <input id="eu-email" value="${u.email||''}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
         </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">🔐 PIN (4 ספרות)</label>
+          <input id="eu-pin" value="${u.pin||''}" maxlength="4" placeholder="1234" type="text" inputmode="numeric" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+          <span style="font-size:.7rem;color:var(--muted)">ריק = כניסה ללא PIN</span>
+        </div>
       </div>
 
       <div style="font-size:.8rem;color:var(--accent);font-weight:700;margin-bottom:8px">🏢 הגדרות עבודה</div>
@@ -866,14 +939,15 @@ async function saveUserEdit(safeKey, phone) {
   const mvtype      = document.getElementById('eu-mvtype')?.value;
   const jobPct      = parseInt(document.getElementById('eu-pct')?.value||'100');
   const empType     = document.getElementById('eu-emptype')?.value;
-  const managerNotes= document.getElementById('eu-notes')?.value.trim();
+  const pin         = document.getElementById('eu-pin')?.value.trim().replace(/[^0-9]/g,'') || '';
+  const managerNotes= document.getElementById('eu-notes')?.value.trim() || '';
   const workDays    = DAYS.filter(day => document.getElementById('eu-day-'+day)?.checked);
 
   if (!fn || !ln) { alert('יש להזין שם'); return; }
 
   const updates = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}`, phone:newPhone||phone,
-    email, movementType:mvtype, jobPct, empType, managerNotes, workDays,
-    allowedActivity: activity || '',  // מחלקה מורשית (ריק = כל)
+    email, movementType:mvtype, jobPct, empType, managerNotes, workDays, pin,
+    allowedActivity: activity || '',
     activity: activity || (localAgents.find(a=>a.key.replace(/[\s']/g,'_')===safeKey)?.activity || '') };
 
   // עדכן ב-localAgents (ענן)
@@ -882,7 +956,7 @@ async function saveUserEdit(safeKey, phone) {
     Object.assign(agent, updates);
     if (newPhone && newPhone !== phone) agent.key = `phone_${newPhone}`;
     showLoading('שומר...');
-    try { await saveAgents(localAgents); } catch(e) { alert('שגיאה: ' + e.message); hideLoading(); return; }
+    try { await saveAgent(agent); } catch(e) { alert('שגיאה: ' + e.message); hideLoading(); return; }
     hideLoading();
   }
 
@@ -932,70 +1006,236 @@ async function executeUndo() {
 // ══════════════════════════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+//  NEW LOGIN SYSTEM
+// ══════════════════════════════════════════════════════════
+let _agentDeptFilter = '';
+let _pinAgentKey = null;
+let _pinVal = '';
+
 function setRole(role) {
   currentRole = role;
   document.getElementById('tabAgent').classList.toggle('active',   role==='agent');
   document.getElementById('tabManager').classList.toggle('active', role==='manager');
-  const isAgent = role === 'agent';
-  document.getElementById('activityFieldWrap').style.display  = isAgent ? '' : 'none';
-  document.getElementById('emailFieldWrap').style.display     = isAgent ? '' : 'none';
-  document.getElementById('phoneFieldWrap').style.display     = isAgent ? '' : 'none';
-  document.getElementById('movementTypeWrap').style.display   = 'none';
-  document.getElementById('loginErr').textContent = '';
+  document.getElementById('agentLoginSection').style.display   = role==='agent'   ? '' : 'none';
+  document.getElementById('managerLoginSection').style.display = role==='manager' ? '' : 'none';
+  const err = document.getElementById('loginErr');
+  if (err) err.textContent = '';
+  const errMgr = document.getElementById('loginErrMgr');
+  if (errMgr) errMgr.textContent = '';
+}
+
+function buildDeptButtons() {
+  const row = document.getElementById('deptFilterRow');
+  if (!row) return;
+  const all = [['', 'הכל'], ...ACTIVITIES.map(a => [a, a])];
+  row.innerHTML = all.map(([v,l]) =>
+    `<button class="dept-btn ${_agentDeptFilter===v?'active':''}" onclick="setAgentDept('${v}',this)">${l}</button>`
+  ).join('');
+}
+
+function setAgentDept(dept, btn) {
+  _agentDeptFilter = dept;
+  document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAgentGrid();
+}
+
+function renderAgentGrid() {
+  const grid   = document.getElementById('agentGrid');
+  const search = (document.getElementById('agentSearchInp')?.value || '').trim();
+  if (!grid) return;
+
+  let agents = localAgents.filter(a => a.fullName && a.key);
+  if (_agentDeptFilter) agents = agents.filter(a => (a.allowedActivity||a.activity) === _agentDeptFilter);
+  if (search) agents = agents.filter(a => a.fullName.includes(search));
+  agents.sort((a,b) => (a.fullName||'').localeCompare(b.fullName||'', 'he'));
+
+  if (!agents.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;text-align:center;padding:24px;grid-column:1/-1">לא נמצאו נציגים</div>`;
+    return;
+  }
+
+  grid.innerHTML = agents.map(a => {
+    const initials = (a.firstName?.[0]||'') + (a.lastName?.[0]||'');
+    return `<div class="agent-card" onclick="agentCardClick('${fbKey(a.key)}')">
+      <div class="initials">${initials}</div>
+      <div>${a.fullName}</div>
+    </div>`;
+  }).join('');
+}
+
+function agentCardClick(safeKey) {
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey || a.key === safeKey);
+  if (!agent) { console.warn('agent not found:', safeKey); return; }
+
+  // מובמנט — פופאפ מקצועי לבחירת שיחות/דיגיטל
+  if ((agent.allowedActivity||agent.activity) === 'מובמנט') {
+    _pendingAgentKey = agent.key;
+    document.getElementById('movementAgentName').textContent = agent.fullName;
+    document.getElementById('movementModal').style.display = 'flex';
+    return;
+  }
+
+  // כניסה רגילה
+  if (agent.pin) {
+    _pinAgentKey = agent.key;
+    _pinVal = '';
+    document.getElementById('pinAgentName').textContent = agent.fullName;
+    document.getElementById('pinError').style.display = 'none';
+    updatePinDots();
+    document.getElementById('pinModal').style.display = 'flex';
+  } else {
+    loginAsAgent(agent.key);
+  }
+}
+
+let _pendingAgentKey = null;
+
+function selectMovementType(type) {
+  document.getElementById('movementModal').style.display = 'none';
+  const agent = localAgents.find(a => a.key === _pendingAgentKey);
+  if (!agent) return;
+  agent._loginMovementType = type;
+
+  if (agent.pin) {
+    _pinAgentKey = agent.key;
+    _pinVal = '';
+    document.getElementById('pinAgentName').textContent = agent.fullName;
+    document.getElementById('pinError').style.display = 'none';
+    updatePinDots();
+    document.getElementById('pinModal').style.display = 'flex';
+  } else {
+    loginAsAgent(agent.key);
+  }
+  _pendingAgentKey = null;
+}
+
+function pinPress(val) {
+  if (val === 'del') { _pinVal = _pinVal.slice(0,-1); }
+  else if (_pinVal.length < 4) { _pinVal += String(val); }
+  updatePinDots();
+  if (_pinVal.length === 4) setTimeout(pinConfirm, 150);
+}
+
+// תמיכה במקלדת
+document.addEventListener('keydown', function(e) {
+  const modal = document.getElementById('pinModal');
+  if (!modal || modal.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinPress(parseInt(e.key));
+  else if (e.key === 'Backspace') pinPress('del');
+  else if (e.key === 'Escape') closePinModal();
+});
+
+function updatePinDots() {
+  for (let i=0; i<4; i++) {
+    const dot = document.getElementById('dot'+i);
+    if (dot) dot.classList.toggle('filled', i < _pinVal.length);
+  }
+}
+
+function pinConfirm() {
+  const agent = localAgents.find(a => a.key === _pinAgentKey);
+  if (!agent) return;
+  if (String(_pinVal) === String(agent.pin)) {
+    const keyToLogin = _pinAgentKey; // שמור לפני סגירה
+    closePinModal();
+    loginAsAgent(keyToLogin);
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    _pinVal = ''; updatePinDots();
+  }
+}
+
+function closePinModal() {
+  document.getElementById('pinModal').style.display = 'none';
+  _pinVal = ''; _pinAgentKey = null;
+}
+
+async function loginAsAgent(key) {
+  const agent = localAgents.find(a => a.key === key);
+  if (!agent) { console.error('agent not found:', key); return; }
+  
+  const movementType = agent._loginMovementType || agent.movementType || null;
+  delete agent._loginMovementType;
+
+  currentUser = {
+    firstName:    agent.firstName,
+    lastName:     agent.lastName,
+    fullName:     agent.fullName,
+    activity:     agent.allowedActivity || agent.activity,
+    movementType: movementType,
+    email:        agent.email || '',
+    phone:        agent.phone || '',
+    agentKey:     key
+  };
+
+  const err = document.getElementById('loginErr');
+  showLoading('מתחבר...');
+  try {
+    document.getElementById('agentNameTag').textContent = currentUser.fullName;
+    showScreen('agentScreen');
+    await renderAgentContent();
+  } catch(e) {
+    showScreen('loginScreen');
+    if(err) err.textContent = 'שגיאה: ' + e.message;
+    currentUser = null;
+  } finally { hideLoading(); }
 }
 
 function onActivityChange() {
-  const act = document.getElementById('loginActivity').value;
-  document.getElementById('movementTypeWrap').style.display = (act === 'מובמנט') ? '' : 'none';
+  const act = document.getElementById('loginActivity')?.value;
+  const wrap = document.getElementById('movementTypeWrap');
+  if (wrap) wrap.style.display = act === 'מובמנט' ? '' : 'none';
 }
 
 async function doLogin() {
-  const fn   = document.getElementById('loginFirst').value.trim();
-  const ln   = document.getElementById('loginLast').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const err  = document.getElementById('loginErr');
-  err.textContent = '';
+  // רק מנהל
+  const email = document.getElementById('loginEmail')?.value.trim().toLowerCase();
+  const pass  = document.getElementById('loginPass')?.value;
+  const err   = document.getElementById('loginErrMgr');
+  if (err) err.textContent = '';
 
-  if (currentRole === 'agent' && (!fn || !ln)) { err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
+  if (!email) { if(err) err.textContent = 'יש להזין מייל'; return; }
+  if (!pass)  { if(err) err.textContent = 'יש להזין סיסמה'; return; }
 
-  if (currentRole === 'agent') {
-    const act = document.getElementById('loginActivity').value;
-    if (pass !== AGENT_PASS)  { err.textContent = 'סיסמה שגויה'; return; }
-    if (!act)                 { err.textContent = 'יש לבחור פעילות'; return; }
-    const movementTypeEl = document.getElementById('loginMovementType');
-    const movementType = (act === 'מובמנט' && movementTypeEl) ? movementTypeEl.value : null;
-    const emailEl = document.getElementById('loginEmail');
-    const email = emailEl ? emailEl.value.trim() : '';
-    const phoneEl = document.getElementById('loginPhone');
-    const phone = phoneEl ? phoneEl.value.replace(/[^0-9]/g,'') : '';
-    currentUser = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}`, activity:act, movementType, email, phone };
-    // שמור משתמש ב-localStorage
-    if (phone) { try { const saved = JSON.parse(localStorage.getItem('moked_users')||'{}'); saved[phone] = {firstName:fn,lastName:ln,activity:act,movementType,email,phone,updatedAt:Date.now()}; localStorage.setItem('moked_users',JSON.stringify(saved)); } catch(e){} }
-    try { await enterAgent(); } catch(e) { err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
-  } else {
-    if (pass !== MANAGER_PASS){ err.textContent = 'סיסמת מנהל שגויה'; return; }
-    currentUser = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}` };
-    try { await enterManager(); } catch(e) { err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
+  // בדוק מנהל אדמין
+  if (pass === MANAGER_PASS) {
+    currentUser = { firstName:'אדיר', lastName:'לוי', fullName:'אדיר לוי', isAdmin: true, activities: ACTIVITIES };
+    try { await enterManager(); } catch(e) { if(err) err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
+    return;
   }
+
+  // בדוק מנהל ב-Firebase
+  showLoading('מתחבר...');
+  try {
+    const managers = await loadManagers();
+    const manager = managers.find(m => m.email === email && m.password === pass);
+    if (!manager) { hideLoading(); if(err) err.textContent = 'מייל או סיסמה שגויים'; return; }
+    currentUser = {
+      firstName: manager.name || email,
+      lastName:  '',
+      fullName:  manager.name || email,
+      isAdmin:   false,
+      activities: manager.activities?.length ? manager.activities : ACTIVITIES,
+      managerEmail: email
+    };
+    await enterManager();
+  } catch(e) { if(err) err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
+  finally { hideLoading(); }
 }
 
 function logout() {
   stopAutoRefresh();
   currentUser = null;
-  ['loginFirst','loginLast','loginPass'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  const act = document.getElementById('loginActivity');
-  if (act) act.value = '';
-  const mt = document.getElementById('loginMovementType');
-  if (mt) mt.value = 'שיחות';
-  const em = document.getElementById('loginEmail');
-  if (em) em.value = '';
-  const ph = document.getElementById('loginPhone');
-  if (ph) ph.value = '';
-  document.getElementById('movementTypeWrap').style.display = 'none';
-  document.getElementById('loginErr').textContent = '';
+  _agentDeptFilter = ''; _pinAgentKey = null; _pinVal = '';
+  const pass  = document.getElementById('loginPass');  if(pass)  pass.value='';
+  const email = document.getElementById('loginEmail'); if(email) email.value='';
+  const search = document.getElementById('agentSearchInp'); if(search) search.value='';
+  closePinModal();
+  setRole('agent');
+  buildDeptButtons();
+  renderAgentGrid();
   showScreen('loginScreen');
 }
 
@@ -1172,9 +1412,23 @@ function agentShowReview() {
 
   agentDraft = draft;
 
-  const typeColor = {none:'var(--muted)', off:'var(--green)', late:'var(--warn)', early:'var(--accent2)'};
+  const typeColor = {none:'var(--muted)', off:'var(--green)', late:'var(--warn)', early:'var(--accent)'};
   const typeStyle = {none:'', off:'color:var(--green);font-weight:700', late:'color:var(--warn);font-weight:700', early:'color:var(--green);font-weight:700'};
-  const SHIFT_MAP = {none:'08:00–17:00 / 09:00–18:00', early:'08:00–17:00', late:'09:00–18:00', off:'חופש'};
+  const actShiftLabel = ACTIVITY_SHIFTS[currentUser?.activity]?.single || null;
+  const mvType = currentUser?.movementType || 'שיחות';
+  const SHIFT_MAP = {
+    none:  actShiftLabel || (mvType === 'דיגיטל' ? 'דיגיטל 08:00–17:00 / 09:00–18:00' : 'שיחות 08:00–17:00 / 09:00–18:00'),
+    early: actShiftLabel || '08:00–17:00',
+    late:  actShiftLabel || '09:00–18:00',
+    off:   'חופש'
+  };
+
+  // הצג סוג מובמנט בסקירה
+  const mvBadge = currentUser?.activity === 'מובמנט'
+    ? `<div style="background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.2);border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:.85rem;color:var(--accent)">
+        סוג: <strong>${mvType}</strong>
+       </div>`
+    : '';
 
   const reviewRows = DAYS.map(day => {
     const c   = draft[day]||{type:'none',time:''};
@@ -1197,6 +1451,7 @@ function agentShowReview() {
     <div class="card">
       <div class="card-title">🔍 סקירת האילוצים לפני שליחה</div>
       <p style="color:var(--muted);font-size:.84rem;margin-bottom:16px">בדוק שהכל נכון לפני שליחה למנהל.</p>
+      ${mvBadge}
       <div style="margin-bottom:20px">${reviewRows}</div>
 
       <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:10px;padding:16px;margin-bottom:20px">
@@ -1255,6 +1510,8 @@ async function agentConfirmAndSubmit() {
     });
     agent.submitted = true;
     agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    // שמור movementType מהכניסה הנוכחית
+    if (currentUser?.movementType) agent.movementType = currentUser.movementType;
     // שמור היסטוריית אילוץ
     if (!agent.constraintHistory) agent.constraintHistory = [];
     agent.constraintHistory.push({
@@ -1342,6 +1599,7 @@ function mgTab(pane, btn) {
   document.getElementById('mgLogsPane').style.display                = pane==='logs'            ? '' : 'none';
   document.getElementById('mgScheduleHistoryPane').style.display     = pane==='scheduleHistory' ? '' : 'none';
   document.getElementById('mgScheduleHistoryPane').style.display = pane==='scheduleHistory' ? '' : 'none';
+  document.getElementById('mgManagersPane').style.display       = pane==='managers'       ? '' : 'none';
   if (pane==='schedule') renderMgSchedule();
   if (pane==='agents')   renderMgAgents();
   if (pane==='history')  renderHistory();
@@ -1349,6 +1607,7 @@ function mgTab(pane, btn) {
   if (pane==='users')    renderUsersTab();
   if (pane==='logs')            renderLogs().catch(()=>{});
   if (pane==='scheduleHistory') renderScheduleHistory().catch(()=>{});
+  if (pane==='managers')        renderManagersTab().catch(()=>{});
 }
 
 // ── Schedule Tab ──
@@ -1668,6 +1927,190 @@ function checkAdminPass(action) {
   if (pass === null) return false;
   if (pass !== ADMIN_PASS) { alert('סיסמה שגויה!'); return false; }
   return true;
+}
+
+// ══════════════════════════════════════════════════════════
+//  PIN CSV IMPORT
+// ══════════════════════════════════════════════════════════
+async function importPinCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.split('\n').filter(l => l.trim());
+
+  // תמוך בפורמטים: "שם מלא,PIN" או "שם פרטי,שם משפחה,PIN"
+  let updated = 0, notFound = [];
+
+  for (const line of lines.slice(1)) { // דלג על כותרת
+    const parts = line.split(',').map(p => p.trim().replace(/"/g,''));
+    if (parts.length < 2) continue;
+
+    let fullName, pin;
+    if (parts.length === 2) {
+      [fullName, pin] = parts;
+    } else {
+      fullName = parts[0] + ' ' + parts[1];
+      pin = parts[2];
+    }
+
+    pin = (pin || '').replace(/[^0-9]/g, '');
+    if (!pin || !fullName) continue;
+
+    const agent = localAgents.find(a => a.fullName === fullName);
+    if (agent) {
+      agent.pin = pin;
+      await saveAgent(agent);
+      updated++;
+    } else {
+      notFound.push(fullName);
+    }
+  }
+
+  input.value = '';
+  let msg = `✅ עודכנו ${updated} נציגים עם PIN`;
+  if (notFound.length) msg += `\n\n❌ לא נמצאו:\n${notFound.join('\n')}`;
+  alert(msg);
+  renderUsersTab();
+}
+
+// ══════════════════════════════════════════════════════════
+//  MANAGERS MANAGEMENT
+// ══════════════════════════════════════════════════════════
+async function loadManagers() {
+  try {
+    const res = await fetch(FB_URL + '/managers.json');
+    const data = await res.json();
+    return data ? Object.values(data).filter(Boolean) : [];
+  } catch(e) { return []; }
+}
+
+async function renderManagersTab() {
+  const pane = document.getElementById('mgManagersPane');
+  pane.innerHTML = `<div class="empty"><div class="spinner"></div></div>`;
+  const managers = await loadManagers();
+
+  const rows = managers.map(m => {
+    const acts = (m.activities||[]).join(', ') || 'כל הפעילויות';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;font-weight:600">${m.name||'—'}</td>
+      <td style="padding:10px 8px;color:var(--muted);font-size:.82rem">${m.email||'—'}</td>
+      <td style="padding:10px 8px;font-size:.82rem">${acts}</td>
+      <td style="padding:10px 8px">
+        <button class="btn btn-sm" style="background:var(--s2);color:var(--muted);font-size:.75rem" onclick="openEditManager('${m.email}')">✏️</button>
+        <button class="btn btn-sm btn-danger" style="font-size:.75rem" onclick="deleteManager('${m.email}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  pane.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">🔑 ניהול מנהלים</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddManager()">➕ הוסף מנהל</button>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">כל מנהל מתחבר עם מייל + סיסמה ורואה רק את הפעילויות שהוגדרו לו.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead><tr style="background:var(--s2);text-align:right">
+            <th style="padding:8px 12px;color:var(--muted);font-weight:600">שם</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">מייל</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">פעילויות</th>
+            <th style="padding:8px 8px;color:var(--muted);font-weight:600">פעולות</th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">אין מנהלים עדיין</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+    <div id="editManagerPanel"></div>`;
+}
+
+function openAddManager() { openEditManager(null); }
+
+function openEditManager(email) {
+  loadManagers().then(managers => {
+    const m = email ? managers.find(x => x.email === email) : {};
+    const actChecks = ACTIVITIES.map(a => {
+      const checked = !email || (m?.activities||[]).includes(a) ? '' : '';
+      const isChecked = m?.activities ? m.activities.includes(a) : true;
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:.83rem;cursor:pointer">
+        <input type="checkbox" id="em-act-${a}" ${isChecked?'checked':''} style="accent-color:var(--accent)"/> ${a}
+      </label>`;
+    }).join('');
+
+    document.getElementById('editManagerPanel').innerHTML = `
+      <div class="card" style="border-color:rgba(88,166,255,.3)">
+        <div class="card-title" style="color:var(--accent)">${email ? '✏️ עריכת מנהל' : '➕ הוספת מנהל'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div>
+            <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">שם</label>
+            <input id="em-name" value="${m?.name||''}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">מייל *</label>
+            <input id="em-email" value="${m?.email||''}" ${email?'readonly':''} style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none;${email?'opacity:.7':''}"/>
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">סיסמה ${email?'(ריק = לא שנה)':' *'}</label>
+            <input id="em-pass" type="password" placeholder="••••••" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+          </div>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px">פעילויות מורשות (ריק = כולן):</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">${actChecks}</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('editManagerPanel').innerHTML=''">ביטול</button>
+          <button class="btn btn-sm btn-success" onclick="saveManager('${email||''}')">💾 שמור</button>
+        </div>
+      </div>`;
+    document.getElementById('editManagerPanel').scrollIntoView({behavior:'smooth'});
+  });
+}
+
+async function saveManager(existingEmail) {
+  const name  = document.getElementById('em-name')?.value.trim();
+  const email = document.getElementById('em-email')?.value.trim().toLowerCase();
+  const pass  = document.getElementById('em-pass')?.value;
+  const activities = ACTIVITIES.filter(a => document.getElementById('em-act-'+a)?.checked);
+
+  if (!email) { alert('יש להזין מייל'); return; }
+
+  const managers = await loadManagers();
+  const existing = managers.find(m => m.email === (existingEmail||email));
+
+  const manager = {
+    name:       name || existing?.name || '',
+    email:      email,
+    password:   pass || existing?.password || '',
+    activities: activities,
+    updatedAt:  Date.now()
+  };
+
+  if (!manager.password) { alert('יש להזין סיסמה'); return; }
+
+  const key = email.replace(/[.@]/g,'_');
+  showLoading('שומר מנהל...');
+  try {
+    await fetch(FB_URL + '/managers/' + key + '.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(manager)
+    });
+    document.getElementById('editManagerPanel').innerHTML = '';
+    renderManagersTab();
+    addLog('הוספת מנהל', name + ' — ' + email);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
+async function deleteManager(email) {
+  if (!confirm(`למחוק את המנהל ${email}?`)) return;
+  const key = email.replace(/[.@]/g,'_');
+  showLoading('מוחק...');
+  try {
+    await fetch(FB_URL + '/managers/' + key + '.json', {method:'DELETE'});
+    renderManagersTab();
+    addLog('מחיקת מנהל', email);
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2526,7 +2969,7 @@ async function saveEditAgent(safeKey) {
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
     if (!agent.submittedAt) agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     cancelEdit(safeKey);
     await renderMgAgents();
     updatePendingBadge();
@@ -3184,7 +3627,7 @@ async function saveModalEdit(safeKey, andApprove) {
     // managerShift is already updated live by modalShiftToggle
     agent.submitted = true;
     if (andApprove) agent.approved = true;
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     closeScheduleEdit();
     generateAndRender(true);
     await renderMgAgents();
@@ -3408,7 +3851,11 @@ function shuffleArray(arr) {
 // preload html2canvas
 (function(){ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; document.head.appendChild(s); })();
 
-setRole('agent');
+(async () => {
+  try { await loadAgents(); } catch(e) {}
+  buildDeptButtons();
+  setRole('agent');
+})();
 </script>
 <div id="undoBar" style="display:none;position:fixed;bottom:20px;right:50%;transform:translateX(50%);background:#1f2937;border:1px solid var(--accent);border-radius:10px;padding:12px 20px;z-index:99999;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.5)">
   <span id="undoMsg" style="color:var(--text);font-size:.88rem"></span>
