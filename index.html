@@ -200,6 +200,7 @@ select.filter-sel:focus{border-color:var(--accent)}
         <div id="deptFilterRow" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px"></div>
         <input type="text" id="agentSearchInp" placeholder="🔍 הקש את שמך..."
           oninput="renderAgentGrid()"
+          autocomplete="off"
           style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;padding:10px 14px;outline:none;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.06)"/>
         <p style="font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:12px">לאחר בחירת שמך תתבקש להזין 4 ספרות אחרונות של ת"ז</p>
         <div id="agentGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:350px;overflow-y:auto"></div>
