@@ -327,7 +327,6 @@ const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
 const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות','הולנדיה'];
 const AGENT_PASS   = '12345';
-const MANAGER_PASS = 'Q1w2e3r4!';
 const ADMIN_PASS   = 'Adirgal123!';
 const COPTS = [
   {v:'none', l:'רגיל',          e:'✅'},
@@ -593,13 +592,14 @@ async function deleteUser(safeKey, phone) {
 function renderUsersTab() {
   const pane = document.getElementById('mgUsersPane');
 
-  // מיזוג נתונים: נציגים מ-JSONBin + משתמשים מ-localStorage
+  // מיזוג נתונים: נציגים לפי פעילות מורשת
   let lsUsers = {};
   try { lsUsers = JSON.parse(localStorage.getItem('moked_users')||'{}'); } catch(e){}
 
-  // בנה רשימה מאוחדת — JSONBin הוא המקור הראשי
+  // בנה רשימה מאוחדת — לפי פעילות מורשת
+  const allowed = allowedActivities();
   const phoneMap = {};
-  localAgents.forEach(a => {
+  localAgents.filter(a => allowed.includes(a.activity)).forEach(a => {
     if (a.phone) phoneMap[a.phone] = { ...a, _source: 'cloud' };
   });
   Object.entries(lsUsers).forEach(([phone, u]) => {
@@ -1199,13 +1199,6 @@ async function doLogin() {
   if (!email) { if(err) err.textContent = 'יש להזין מייל'; return; }
   if (!pass)  { if(err) err.textContent = 'יש להזין סיסמה'; return; }
 
-  // בדוק מנהל אדמין
-  if (pass === MANAGER_PASS) {
-    currentUser = { firstName:'אדיר', lastName:'לוי', fullName:'אדיר לוי', isAdmin: true, activities: ACTIVITIES };
-    try { await enterManager(); } catch(e) { if(err) err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
-    return;
-  }
-
   // בדוק מנהל ב-Firebase
   showLoading('מתחבר...');
   try {
@@ -1216,8 +1209,8 @@ async function doLogin() {
       firstName: manager.name || email,
       lastName:  '',
       fullName:  manager.name || email,
-      isAdmin:   false,
-      activities: manager.activities?.length ? manager.activities : ACTIVITIES,
+      isAdmin:   manager.isAdmin || false,
+      activities: manager.isAdmin ? ACTIVITIES : (manager.activities?.length ? manager.activities : ACTIVITIES),
       managerEmail: email
     };
     await enterManager();
@@ -1553,6 +1546,9 @@ async function enterManager() {
   try {
     document.getElementById('managerNameTag').textContent = currentUser.fullName;
     showScreen('managerScreen');
+    // הסתר טאב מנהלים ממנהלים שאינם אדמין
+    const managersTab = document.getElementById('mgTab8');
+    if (managersTab) managersTab.style.display = currentUser.isAdmin ? '' : 'none';
     await loadAgents();
     renderMgSchedule();
     await renderMgAgents();
@@ -1575,8 +1571,20 @@ async function enterManager() {
   finally { hideLoading(); }
 }
 
+// פעילויות מורשות למנהל הנוכחי
+function allowedActivities() {
+  if (!currentUser || currentUser.isAdmin) return ACTIVITIES;
+  return currentUser.activities && currentUser.activities.length ? currentUser.activities : ACTIVITIES;
+}
+
+// סינון נציגים לפי פעילויות מורשות
+function filterByAllowed(agents) {
+  const allowed = allowedActivities();
+  return agents.filter(a => allowed.includes(a.activity));
+}
+
 function updatePendingBadge() {
-  const pending = localAgents.filter(a => a.submitted && !a.approved).length;
+  const pending = filterByAllowed(localAgents).filter(a => a.submitted && !a.approved).length;
   const dot = document.getElementById('pendingCount');
   if (!dot) return;
   if (pending > 0) { dot.style.display='inline-block'; dot.textContent=pending; }
@@ -2054,7 +2062,12 @@ function openEditManager(email) {
             <input id="em-pass" type="password" placeholder="••••••" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
           </div>
         </div>
-        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px">פעילויות מורשות (ריק = כולן):</div>
+        <div style="grid-column:1/-1">
+          <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer">
+            <input type="checkbox" id="em-admin" ${m?.isAdmin?'checked':''} style="accent-color:var(--accent)"/>
+            <span>👑 אדמין — גישה לכל הפעילויות וטאב מנהלים</span>
+          </label>
+        </div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">${actChecks}</div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('editManagerPanel').innerHTML=''">ביטול</button>
@@ -2069,7 +2082,8 @@ async function saveManager(existingEmail) {
   const name  = document.getElementById('em-name')?.value.trim();
   const email = document.getElementById('em-email')?.value.trim().toLowerCase();
   const pass  = document.getElementById('em-pass')?.value;
-  const activities = ACTIVITIES.filter(a => document.getElementById('em-act-'+a)?.checked);
+  const isAdmin    = document.getElementById('em-admin')?.checked || false;
+  const activities = isAdmin ? ACTIVITIES : ACTIVITIES.filter(a => document.getElementById('em-act-'+a)?.checked);
 
   if (!email) { alert('יש להזין מייל'); return; }
 
@@ -2081,6 +2095,7 @@ async function saveManager(existingEmail) {
     email:      email,
     password:   pass || existing?.password || '',
     activities: activities,
+    isAdmin:    isAdmin,
     updatedAt:  Date.now()
   };
 
@@ -2355,7 +2370,7 @@ function renderMgSchedule() {
   const pane = document.getElementById('mgSchedulePane');
   const existingFilter = pane.querySelector('#actFilter');
   const selected = existingFilter ? existingFilter.value : '';
-  const actOpts = ['', ...ACTIVITIES].map(a =>
+  const actOpts = ['', ...allowedActivities()].map(a =>
     `<option value="${a}" ${a===selected?'selected':''}>${a||'-- כל הפעילויות --'}</option>`
   ).join('');
   const existingOutput = document.getElementById('scheduleOutput') ? document.getElementById('scheduleOutput').innerHTML : '';
@@ -2387,7 +2402,7 @@ function generateAndRender(silent) {
   const filterEl  = document.getElementById('actFilter');
   const actFilter = filterEl ? filterEl.value : '';
   if (!silent) lastGeneratedFilter = actFilter;
-  const pool = localAgents.filter(a => a.submitted && a.approved && (!actFilter || a.activity === actFilter));
+  const pool = filterByAllowed(localAgents).filter(a => a.submitted && a.approved && (!actFilter || a.activity === actFilter));
   const output = document.getElementById('scheduleOutput');
   if (!output) return;
   if (!pool.length) {
@@ -2700,11 +2715,11 @@ async function renderMgAgents() {
   const existingFilter = document.getElementById('agentActFilter');
   if (existingFilter) mgAgentsFilter = existingFilter.value;
 
-  const all = localAgents;
+  const all = filterByAllowed(localAgents);
   const submitted = all.filter(a=>a.submitted).length;
   const approved  = all.filter(a=>a.approved).length;
   const pending   = all.filter(a=>a.submitted&&!a.approved).length;
-  const actOpts = ['', ...ACTIVITIES].map(a =>
+  const actOpts = ['', ...allowedActivities()].map(a =>
     `<option value="${a}" ${a===mgAgentsFilter?'selected':''}>${a||'-- כל הפעילויות --'}</option>`
   ).join('');
   let visible = mgAgentsFilter ? all.filter(a=>a.activity===mgAgentsFilter) : all;
