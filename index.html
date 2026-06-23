@@ -3583,10 +3583,10 @@ async function resetAllSubmissions() {
 
 // ── Edit from schedule (click on pill) ──
 function openScheduleEdit(safeKey) {
-  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
-  if (!agent) return;
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey || a.key === safeKey || a.key.replace(/[\s']/g,'_') === safeKey);
+  if (!agent) { console.warn('openScheduleEdit: agent not found', safeKey); return; }
 
-  const isMovement = agent.activity === 'מובמנט';
+  const isMovement = agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital;
   document.getElementById('editModalTitle').textContent = `✏️ ${agent.fullName}`;
 
   const rows = DAYS.map(day => {
@@ -3597,23 +3597,38 @@ function openScheduleEdit(safeKey) {
     if (val==='late')  timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
     if (val==='early') timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
 
-    // כפתורי שיבוץ ידני — רק מובמנט/מאוחדת דיגיטל, יום רגיל
+    // כפתורי שיחות/דיגיטל + משמרת — לכל מובמנט שאינו חופש
     let shiftToggleH = '';
-    if (isMovement && val === 'none') {
-      const isDigital = agent.movementType === 'דיגיטל';
+    if (isMovement && val !== 'off') {
       const ms = agent.managerShift?.[day] || '';
-      const s8 = isDigital ? 'd8' : '8';
-      const s9 = isDigital ? 'd9' : '9';
-      shiftToggleH = `<div style="display:flex;gap:5px;margin-top:5px">
-        <span style="font-size:.72rem;color:var(--muted);padding-top:3px">משמרת:</span>
-        <button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s8}')"
-          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
-          background:${ms===s8?'rgba(63,185,80,.2)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};
-          font-size:.75rem;cursor:pointer;font-family:inherit">08–17</button>
-        <button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s9}')"
-          style="padding:2px 10px;border-radius:5px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};
-          background:${ms===s9?'rgba(88,166,255,.2)':'var(--bg)'};color:${ms===s9?'var(--accent)':'var(--muted)'};
-          font-size:.75rem;cursor:pointer;font-family:inherit">09–18</button>
+      const curIsDigital = ms==='d8'||ms==='d9' ? true : ms==='8'||ms==='9' ? false : agent.movementType==='דיגיטל';
+      const s8 = curIsDigital ? 'd8' : '8';
+      const s9 = curIsDigital ? 'd9' : '9';
+
+      const callBtn = `<button onclick="toggleMovementType('${safeKey}','${day}','שיחות')"
+          style="padding:3px 10px;border-radius:6px;border:1px solid ${!curIsDigital?'var(--warn)':'var(--border)'};
+          background:${!curIsDigital?'rgba(240,136,62,.15)':'var(--bg)'};color:${!curIsDigital?'var(--warn)':'var(--muted)'};
+          font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:${!curIsDigital?'700':'400'}">📞 שיחות</button>`;
+      const digBtn = `<button onclick="toggleMovementType('${safeKey}','${day}','דיגיטל')"
+          style="padding:3px 10px;border-radius:6px;border:1px solid ${curIsDigital?'var(--purple)':'var(--border)'};
+          background:${curIsDigital?'rgba(188,140,255,.15)':'var(--bg)'};color:${curIsDigital?'var(--purple)':'var(--muted)'};
+          font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:${curIsDigital?'700':'400'}">💻 דיגיטל</button>`;
+
+      let shiftBtns = '';
+      if (val === 'none') {
+        const shift8Btn = `<button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s8}')"
+            style="padding:3px 10px;border-radius:6px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
+            background:${ms===s8?'rgba(63,185,80,.15)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};
+            font-size:.75rem;cursor:pointer;font-family:inherit">08–17</button>`;
+        const shift9Btn = `<button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s9}')"
+            style="padding:3px 10px;border-radius:6px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};
+            background:${ms===s9?'rgba(88,166,255,.15)':'var(--bg)'};color:${ms===s9?'var(--accent)':'var(--muted)'};
+            font-size:.75rem;cursor:pointer;font-family:inherit">09–18</button>`;
+        shiftBtns = `<span style="font-size:.72rem;color:var(--muted);padding-top:3px">⏰</span>${shift8Btn}${shift9Btn}`;
+      }
+
+      shiftToggleH = `<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center">
+        ${callBtn}${digBtn}${shiftBtns}
       </div>`;
     }
 
@@ -3672,6 +3687,23 @@ function modalSelChange(safeKey, day, sel) {
       noteCell.innerHTML = '';
     }
   }
+}
+
+function toggleMovementType(safeKey, day, type) {
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
+  if (!agent) return;
+  if (!agent.managerShift) agent.managerShift = {};
+  // שנה את ה-managerShift ליום זה בהתאם לסוג
+  const ms = agent.managerShift[day] || '';
+  const isCurrently9 = ms === '9' || ms === 'd9';
+  if (type === 'שיחות') {
+    agent.managerShift[day] = isCurrently9 ? '9' : '8';
+  } else {
+    agent.managerShift[day] = isCurrently9 ? 'd9' : 'd8';
+  }
+  saveAgent(agent).catch(()=>{});
+  // רענן את החלון
+  openScheduleEdit(safeKey);
 }
 
 function modalShiftToggle(safeKey, day, shift) {
