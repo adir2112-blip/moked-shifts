@@ -622,6 +622,16 @@ async function deleteUser(safeKey, phone) {
   finally { hideLoading(); }
 }
 
+function renderUsersOnly() {
+  const val = userSearch;
+  renderUsersTab();
+  // שחזר פוקוס לשדה החיפוש
+  requestAnimationFrame(() => {
+    const inp = document.getElementById('userSearchInput');
+    if (inp) { inp.focus(); inp.setSelectionRange(val.length, val.length); }
+  });
+}
+
 function renderUsersTab() {
   const pane = document.getElementById('mgUsersPane');
 
@@ -701,7 +711,7 @@ function renderUsersTab() {
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
         <input placeholder="🔍 חיפוש לפי שם / טלפון / מייל..." value="${userSearch}"
-          oninput="userSearch=this.value;renderUsersTab()"
+          id="userSearchInput" oninput="userSearch=this.value;renderUsersOnly()"
           style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;flex:1;min-width:180px"/>
         <select onchange="userActivityFilter=this.value;renderUsersTab()"
           style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer">
@@ -2964,7 +2974,7 @@ async function renderMgAgents() {
       ${statusFilters}
       <div style="margin-top:14px"></div>
       <div id="manualAgentForm"></div>
-      <div class="agents-grid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בסטטוס זה</div>`}</div>
+      <div class="agents-grid" id="usersGrid">${cards || `<div style="color:var(--muted);padding:12px">אין נציגים בסטטוס זה</div>`}</div>
     </div>`;
 }
 
