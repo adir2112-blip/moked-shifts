@@ -2621,6 +2621,7 @@ function buildSchedule(agentList) {
 }
 
 function renderScheduleTable(sched, total, actFilter) {
+  const pool = filterByAllowed(localAgents).filter(a => a.submitted && a.approved && (!actFilter || a.activity === actFilter));
   const title = actFilter ? `סידור עבודה – ${actFilter}` : 'סידור עבודה – כל הפעילויות';
   const isMovement = actFilter === 'מובמנט';
   const hasDigital  = isMovement || ACTIVITY_SHIFTS[actFilter]?.hasDigital;
@@ -2735,8 +2736,118 @@ function renderScheduleTable(sched, total, actFilter) {
       <button class="btn btn-purple" onclick="downloadAsImage()">📸 הורד כתמונה</button>
       <button class="btn btn-primary" onclick="sendEmailsManually()" id="sendEmailsBtn">📧 שלח סידור לעובדים במייל</button>
       <button class="btn btn-success btn-sm" onclick="exportToExcel()">📊 ייצוא לאקסל</button>
-      ${actFilter ? `<button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border);color:var(--text)" onclick="openManualAgentPopup('${actFilter}')">➕ הוסף נציג ידני</button>` : ''}
+    </div>
+    ${renderUnscheduledAgents(actFilter, pool)}`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  UNSCHEDULED AGENTS ROW
+// ══════════════════════════════════════════════════════════
+function renderUnscheduledAgents(actFilter, scheduledPool) {
+  if (!actFilter) return '';
+
+  // כל נציגים מהמחלקה שאינם ב-pool (לא הגישו / לא אושרו)
+  const scheduledKeys = new Set((scheduledPool||[]).map(a => a.key));
+  const unscheduled = localAgents.filter(a =>
+    (a.activity === actFilter || a.allowedActivity === actFilter) &&
+    !scheduledKeys.has(a.key)
+  );
+
+  if (!unscheduled.length) return '';
+
+  const pills = unscheduled.map(a => {
+    const safeKey = fbKey(a.key);
+    const status = a.submitted && !a.approved
+      ? `<span style="font-size:.65rem;color:var(--warn)"> ⏳ממתין</span>`
+      : `<span style="font-size:.65rem;color:var(--muted)"> ○לא הגיש</span>`;
+    return `<span onclick="quickAssignAgent('${safeKey}')"
+      style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border:1.5px dashed var(--border);
+      border-radius:8px;padding:5px 12px;margin:3px;font-size:.82rem;cursor:pointer;transition:all .15s"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(88,166,255,.08)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--s2)'">
+      ${a.fullName}${status}
+    </span>`;
+  }).join('');
+
+  return `<div class="card" style="margin-top:12px;border-color:rgba(240,136,62,.25)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-weight:700;font-size:.9rem;color:var(--warn)">⚠️ טרם שובצו לסידור</span>
+      <span style="font-size:.78rem;color:var(--muted)">${unscheduled.length} נציגים</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:2px">${pills}</div>
+    <p style="font-size:.73rem;color:var(--muted);margin-top:8px">לחץ על שם לשיבוץ מהיר</p>
+  </div>`;
+}
+
+function quickAssignAgent(safeKey) {
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
+  if (!agent) return;
+
+  const isMovement = agent.activity === 'מובמנט';
+  const mvType = agent.movementType || 'שיחות';
+
+  // בנה popup שיבוץ מהיר
+  const existingPopup = document.getElementById('quickAssignPopup');
+  if (existingPopup) existingPopup.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'quickAssignPopup';
+  popup.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px';
+  popup.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📋 שיבוץ מהיר</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:16px">${agent.fullName} ${isMovement?'· '+mvType:''}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        ${DAYS.map(day => `
+          <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px">
+            <div style="font-size:.8rem;font-weight:700;margin-bottom:6px">יום ${day}</div>
+            <select id="qa-${day}" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.8rem;padding:4px 6px;outline:none">
+              <option value="none">רגיל</option>
+              ${isMovement ? `<option value="d8">דיגיטל 08–17</option><option value="d9">דיגיטל 09–18</option>` : ''}
+              <option value="8">08–17</option>
+              <option value="9">09–18</option>
+              <option value="off">חופש</option>
+            </select>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('quickAssignPopup').remove()"
+          style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer">ביטול</button>
+        <button onclick="confirmQuickAssign('${safeKey}')"
+          style="padding:8px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">✅ שבץ</button>
+      </div>
     </div>`;
+  document.body.appendChild(popup);
+}
+
+async function confirmQuickAssign(safeKey) {
+  const agent = localAgents.find(a => fbKey(a.key) === safeKey);
+  if (!agent) return;
+
+  if (!agent.managerShift) agent.managerShift = {};
+  DAYS.forEach(day => {
+    const sel = document.getElementById('qa-' + day);
+    if (sel) agent.managerShift[day] = sel.value;
+  });
+
+  // סמן כמאושר
+  agent.submitted = true;
+  agent.approved  = true;
+  if (!agent.constraints) agent.constraints = {};
+  DAYS.forEach(day => {
+    if (!agent.constraints[day]) agent.constraints[day] = {type:'none', time:'', note:''};
+  });
+
+  document.getElementById('quickAssignPopup')?.remove();
+  showLoading('משבץ...');
+  try {
+    await saveAgent(agent);
+    addLog('שיבוץ מהיר', agent.fullName);
+    generateAndRender(true);
+    await renderMgAgents();
+    updatePendingBadge();
+  } catch(e) { alert('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 async function sendEmailsManually() {
