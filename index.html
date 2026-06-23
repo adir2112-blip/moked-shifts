@@ -528,7 +528,7 @@ async function getOrCreateAgent(fn, ln, activity) {
               joinDate: new Date().toLocaleDateString('he-IL'),
               submitted:false, approved:false, constraints };
     localAgents.push(agent);
-    await saveAgents(localAgents);
+    await saveAgent(agent);
   } else {
     let changed = false;
     // עדכן movementType רק אם נציג בחר בעצמו (לא אם הוגדר ע"י מנהל)
@@ -825,6 +825,11 @@ function openAddAgentByManager() {
             <option value="דיגיטל">💻 דיגיטל</option>
           </select>
         </div>
+        <div>
+          <label style="font-size:.75rem;color:var(--muted);display:block;margin-bottom:3px">🔐 קוד PIN (4 ספרות)</label>
+          <input id="na-pin" placeholder="1234" maxlength="4" inputmode="numeric" type="text" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+          <span style="font-size:.7rem;color:var(--muted)">ריק = כניסה ללא PIN</span>
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="document.getElementById('addAgentPanel').innerHTML=''">ביטול</button>
@@ -841,12 +846,12 @@ async function saveNewAgentByManager() {
   const email    = document.getElementById('na-email')?.value.trim();
   const activity = document.getElementById('na-activity')?.value;
   const mvtype   = document.getElementById('na-mvtype')?.value;
+  const pin      = document.getElementById('na-pin')?.value.trim().replace(/[^0-9]/g,'') || '';
 
   if (!fn || !ln)    { alert('יש להזין שם פרטי ושם משפחה'); return; }
   if (!phone)        { alert('יש להזין מספר טלפון'); return; }
   if (!activity)     { alert('יש לבחור מחלקה'); return; }
 
-  // בדוק שהטלפון או השם לא קיימים כבר
   if (localAgents.find(a => a.phone === phone)) { alert('נציג עם טלפון זה כבר קיים!'); return; }
   if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) { alert(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`); return; }
 
@@ -856,6 +861,7 @@ async function saveNewAgentByManager() {
   const agent = {
     key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln,
     phone, email, activity, movementType:mvtype,
+    pin: pin || '',
     joinDate: new Date().toLocaleDateString('he-IL'),
     submitted:false, approved:false, constraints,
     managerShift:{}, constraintHistory:[]
@@ -864,7 +870,7 @@ async function saveNewAgentByManager() {
   showLoading('מוסיף נציג...');
   try {
     localAgents.push(agent);
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     // שמור גם ב-localStorage
     try {
       const users = JSON.parse(localStorage.getItem('moked_users')||'{}');
@@ -2371,7 +2377,7 @@ async function restoreSchedule() {
         agent.approved     = true;
       }
     });
-    await saveAgents(localAgents);
+    for (const a of localAgents.filter(x=>x.submitted||x.approved)) await saveAgent(a);
     addLog('שחזור סידור', `שוחזר סידור ${last.actFilter||'כולן'} מ-${last.time}`);
     generateAndRender(true);
     await renderMgAgents();
@@ -2431,7 +2437,7 @@ async function restoreFromHistory() {
       restored++;
     });
 
-    await saveAgents(localAgents);
+    for (const a of localAgents.filter(x=>x.submitted&&x.approved)) await saveAgent(a);
     addLog('שחזור מהיסטוריה', `שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}`);
 
     const filterEl = document.getElementById('actFilter');
@@ -3189,7 +3195,7 @@ async function saveAndApproveAgent(safeKey) {
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
     agent.approved  = true;
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     cancelEdit(safeKey);
     await renderMgAgents();
     updatePendingBadge();
@@ -3359,17 +3365,16 @@ async function rejectAgent(key) {
   if (!confirm('לדחות את האילוצים של נציג זה?')) return;
   const a = localAgents.find(x=>x.key===key);
   if (!a) return;
-  // שמור גיבוי לביטול
   const backup = { submitted:a.submitted, approved:a.approved, constraints:JSON.parse(JSON.stringify(a.constraints)) };
   showLoading('מעדכן...');
   try {
     a.submitted = false; a.approved = false;
     DAYS.forEach(d => a.constraints[d] = {type:'none',time:''});
-    await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+    await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     addLog('דחיית נציג', a.fullName);
     showUndo(`❌ אילוץ של ${a.fullName} נדחה`, async () => {
       a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
-      await saveAgents(localAgents); await renderMgAgents(); updatePendingBadge();
+      await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     });
   } catch(e) { alert('שגיאה: ' + e.message); }
   finally { hideLoading(); }
@@ -3393,7 +3398,7 @@ async function clearScheduleForActivity(activity) {
       });
     }
   });
-  if (changed) await saveAgents(localAgents).catch(()=>{});
+  if (changed) { for (const a of localAgents.filter(x=>x.activity===activity)) await saveAgent(a).catch(()=>{}); }
   addLog('מחיקת סידור', `סידור ${activity} נמחק`);
   const output = document.getElementById('scheduleOutput');
   if (output) output.innerHTML = `<div class="empty"><div class="ico">📅</div><p>הסידור של ${activity} נמחק. לחץ "צור סידור" ליצירה מחדש.</p></div>`;
@@ -3511,7 +3516,7 @@ async function saveManualAgentFromPopup(activity) {
   showLoading('מוסיף נציג...');
   try {
     localAgents.push(agent);
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     closeManualAgentPopup();
     // רענן סידור
     if (lastGeneratedFilter === activity || lastGeneratedFilter === '') {
@@ -3638,7 +3643,7 @@ async function saveManualAgent(activity) {
   showLoading('מוסיף נציג...');
   try {
     localAgents.push(agent);
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     document.getElementById('manualAgentForm').innerHTML = '';
     await renderMgAgents();
     updatePendingBadge();
@@ -3661,7 +3666,7 @@ async function clearPendingConstraints(activity) {
         DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
       }
     });
-    await saveAgents(localAgents);
+    for (const a of localAgents.filter(x => x.activity === activity)) await saveAgent(a);
     await renderMgAgents();
     updatePendingBadge();
   } catch(e) { alert('שגיאה: ' + e.message); }
@@ -3881,7 +3886,7 @@ async function removeAgentFromSchedule(safeKey) {
     agent.approved  = false;
     agent.submitted = false;
     DAYS.forEach(d => agent.constraints[d] = {type:'none', time:'', note:''});
-    await saveAgents(localAgents);
+    await saveAgent(agent);
     closeScheduleEdit();
     // רענן סידור עם localAgents המעודכן (אחרי השמירה)
     const pool = localAgents.filter(a => a.submitted && a.approved && (!lastGeneratedFilter || a.activity === lastGeneratedFilter));
