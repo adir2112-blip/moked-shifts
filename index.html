@@ -2549,27 +2549,17 @@ function buildSchedule(agentList) {
   // כך שכל לחיצה חוזרת על "צור סידור" לא תשנה את השיבוץ
   let needsSave = false;
   agentList.forEach(agent => {
-    const isDigital = (agent.movementType === 'דיגיטל' && (agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital));
+    const baseIsDigital = (agent.movementType === 'דיגיטל' && (agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital));
     const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
-    if (!isDigital && !isSingle) {
-      DAYS.forEach(day => {
-        const c = agent.constraints[day]||{type:'none',time:''};
-        const ms = agent.managerShift?.[day] || '';
-        // רק ביום "רגיל" ובלי בחירת מנהל — קבע רנדומלי ושמור
-        if (c.type === 'none' && !ms) {
-          if (!agent.managerShift) agent.managerShift = {};
-          agent.managerShift[day] = Math.random() < 0.5 ? '8' : '9';
-          needsSave = true;
-        }
-      });
-    }
-    if (isDigital) {
+    if (!isSingle) {
       DAYS.forEach(day => {
         const c = agent.constraints[day]||{type:'none',time:''};
         const ms = agent.managerShift?.[day] || '';
         if (c.type === 'none' && !ms) {
           if (!agent.managerShift) agent.managerShift = {};
-          agent.managerShift[day] = Math.random() < 0.5 ? 'd8' : 'd9';
+          agent.managerShift[day] = baseIsDigital
+            ? (Math.random() < 0.5 ? 'd8' : 'd9')
+            : (Math.random() < 0.5 ? '8' : '9');
           needsSave = true;
         }
       });
@@ -2583,9 +2573,13 @@ function buildSchedule(agentList) {
     const shift8=[], shift9=[], digital8=[], digital9=[], dayOff=[];
     agentList.forEach(agent => {
       const c = agent.constraints[day]||{type:'none',time:''};
-      const isDigital = (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
-      const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
       const ms = agent.managerShift?.[day] || '';
+      // קבע דיגיטל לפי managerShift הספציפי ליום (אם הוגדר), אחרת לפי movementType הגלובלי
+      const isDigitalDay = (ms === 'd8' || ms === 'd9') ? true
+                          : (ms === '8' || ms === '9') ? false
+                          : (agent.activity === 'מובמנט' && agent.movementType === 'דיגיטל');
+      const isDigital = isDigitalDay;
+      const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
       const entry = {name:agent.fullName, activity:agent.activity, movementType:agent.movementType||null, time:c.time, constraintType:c.type, note:c.note||''};
 
       if (c.type === 'off') {
