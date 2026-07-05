@@ -64,6 +64,7 @@ select.csel.v-off{color:var(--danger);border-color:rgba(255,123,114,.4)}
 select.csel.v-late{color:var(--warn);border-color:rgba(240,136,62,.4)}
 select.csel.v-early{color:var(--green);border-color:rgba(63,185,80,.4)}
 select.csel.v-none{color:var(--muted)}
+select.csel.v-split{color:var(--purple);border-color:rgba(188,140,255,.4)}
 .time-cell{display:flex;align-items:center;gap:6px;justify-content:center}
 .time-lbl{font-size:.72rem;white-space:nowrap}
 input.time-inp{background:var(--bg);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:inherit;font-size:.82rem;padding:4px 7px;outline:none;width:90px;cursor:pointer;animation:fadeIn .18s ease}
@@ -362,10 +363,11 @@ const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פ�
 const AGENT_PASS   = '12345';
 const ADMIN_PASS   = 'Adirgal123!';
 const COPTS = [
-  {v:'none', l:'רגיל',          e:'✅'},
-  {v:'off',  l:'חופש',           e:'🏖'},
-  {v:'late', l:'התחלה מאוחרת',  e:'🌙'},
-  {v:'early',l:'יציאה מוקדמת',  e:'🌅'},
+  {v:'none',  l:'רגיל',           e:'✅'},
+  {v:'off',   l:'חופש',            e:'🏖'},
+  {v:'late',  l:'התחלה מאוחרת',   e:'🌙'},
+  {v:'early', l:'יציאה מוקדמת',   e:'🌅'},
+  {v:'split', l:'פיצול משמרת',    e:'🔀'},
 ];
 
 // שעות עבודה קבועות לכל פעילות
@@ -754,7 +756,7 @@ function openUserHistory(safeKey) {
   if (!agent) return;
   const hist = agent.constraintHistory || [];
   const panel = document.getElementById('userHistoryPanel');
-  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת', split:'פיצול משמרת'};
 
   if (!hist.length) {
     panel.innerHTML = `<div class="card" style="border-color:rgba(88,166,255,.2)"><p style="color:var(--muted)">אין היסטוריה עדיין ל-${agent.fullName}</p></div>`;
@@ -767,7 +769,7 @@ function openUserHistory(safeKey) {
       const c = h.constraints?.[day] || {type:'none'};
       const label = COPTS_MAP[c.type]||'רגיל';
       const color = c.type==='off' ? 'var(--danger)' : c.type==='late' ? 'var(--warn)' : c.type==='early' ? 'var(--green)' : 'var(--muted)';
-      const timeStr = c.time ? ` (${c.time})` : '';
+      const timeStr = c.type==='split'&&c.time ? (() => { const p=c.time.split('-'); return ` (${p[0]}–${p[1]} | ${p[2]}–${p[3]})`; })() : c.time ? ` (${c.time})` : '';
       return `<span style="display:inline-block;background:var(--s2);border-radius:6px;padding:2px 8px;font-size:.75rem;margin:2px;color:${color}">יום ${day}: ${label}${timeStr}</span>`;
     }).join('');
     return `<div style="padding:10px;border-bottom:1px solid var(--border)">
@@ -1347,10 +1349,26 @@ function agentSetType(day, value) {
       cell.innerHTML = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${t}" onchange="agentSetTime('${day}',this.value)"/></div>${showNote ? noteField : ''}`;
     } else if (value==='off') {
       cell.innerHTML = noteField;
+    } else if (value==='split') {
+      const parts = (t||'').split('-');
+      cell.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 1:</span><input class="time-inp" type="time" value="${parts[0]||''}" oninput="agentSetSplitTime('${day}',0,this.value)" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 1:</span><input class="time-inp" type="time" value="${parts[1]||''}" oninput="agentSetSplitTime('${day}',1,this.value)" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 2:</span><input class="time-inp" type="time" value="${parts[2]||''}" oninput="agentSetSplitTime('${day}',2,this.value)" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 2:</span><input class="time-inp" type="time" value="${parts[3]||''}" oninput="agentSetSplitTime('${day}',3,this.value)" style="border-color:rgba(188,140,255,.6)"/></div>
+      </div>`;
     } else {
       cell.innerHTML = '';
     }
   }
+}
+
+function agentSetSplitTime(day, idx, value) {
+  if (!agentDraft[day]) agentDraft[day] = {type:'split', time:'', note:''};
+  const parts = (agentDraft[day].time||'').split('-');
+  while (parts.length < 4) parts.push('');
+  parts[idx] = value;
+  agentDraft[day].time = parts.join('-');
 }
 
 function agentSetTime(day, value) {
@@ -1401,6 +1419,15 @@ function renderAgentEditForm(agent, container) {
     let timeH = '';
     if (val==='late')  timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
     if (val==='early') timeH = `<div class="time-cell"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" onchange="agentSetTime('${day}',this.value)"/></div>`;
+    if (val==='split') {
+      const parts = (c.time||'').split('-');
+      timeH = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 1:</span><input class="time-inp" type="time" value="${parts[0]||''}" oninput="agentSetSplitTime('${day}',0,this.value)" style="border-color:var(--purple)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 1:</span><input class="time-inp" type="time" value="${parts[1]||''}" oninput="agentSetSplitTime('${day}',1,this.value)" style="border-color:var(--purple)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 2:</span><input class="time-inp" type="time" value="${parts[2]||''}" oninput="agentSetSplitTime('${day}',2,this.value)" style="border-color:var(--purple)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 2:</span><input class="time-inp" type="time" value="${parts[3]||''}" oninput="agentSetSplitTime('${day}',3,this.value)" style="border-color:var(--purple)"/></div>
+      </div>`;
+    }
     const showNote = val !== 'none';
     const noteH = showNote ? `<input type="text" placeholder="הערה (חובה)" maxlength="60" value="${(c.note||'').replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem;padding:7px 10px;outline:none"/>` : '';
 
@@ -1448,11 +1475,18 @@ function agentShowReview() {
   const activeDaysR = (() => { try { const a=localAgents.find(x=>x.key===currentUser?.agentKey); return (a?.workDays?.length)?DAYS.filter(d=>a.workDays.includes(d)):DAYS; } catch(e){return DAYS;} })();
   activeDaysR.forEach(day => {
     const sel  = document.getElementById('csel-'+day);
-    const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
     const ninp = document.getElementById('note-'+day);
     const type = sel ? sel.value : 'none';
     const note = ninp ? ninp.value.trim() : (agentDraft[day]?.note||'');
-    draft[day] = { type, time: tinp ? tinp.value : '', note };
+    let time = '';
+    if (type === 'split') {
+      // אסוף מ-agentDraft שכבר עודכן ע"י agentSetSplitTime
+      time = agentDraft[day]?.time || '';
+    } else {
+      const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
+      time = tinp ? tinp.value : '';
+    }
+    draft[day] = { type, time, note };
     if ((type==='off'||type==='late'||type==='early') && !note) {
       missingNote.push(day);
     }
@@ -1497,7 +1531,8 @@ function agentShowReview() {
     none:  actShiftLabel || (mvType === 'דיגיטל' ? 'דיגיטל 08:00–17:00 / 09:00–18:00' : 'שיחות 08:00–17:00 / 09:00–18:00'),
     early: actShiftLabel || '08:00–17:00',
     late:  actShiftLabel || '09:00–18:00',
-    off:   'חופש'
+    off:   'חופש',
+    split: (c) => { const p=(c.time||'').split('-'); return `🔀 ${p[0]||'?'}–${p[1]||'?'} | ${p[2]||'?'}–${p[3]||'?'}`; }
   };
 
   // הצג סוג מובמנט בסקירה
@@ -1510,8 +1545,10 @@ function agentShowReview() {
   const reviewRows = DAYS.map(day => {
     const c   = draft[day]||{type:'none',time:''};
     const opt = COPTS.find(o=>o.v===c.type)||COPTS[0];
-    const shift = SHIFT_MAP[c.type]||'';
-    const timeStr = c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
+    const shift = typeof SHIFT_MAP[c.type] === 'function' ? SHIFT_MAP[c.type](c) : (SHIFT_MAP[c.type]||'');
+    let timeStr = '';
+    if (c.type==='split'&&c.time) { const p=c.time.split('-'); timeStr=` (${p[0]}–${p[1]} | ${p[2]}–${p[3]})`; }
+    else if (c.time) timeStr = ` (${c.type==='late'?'מ-':'עד '}${c.time})`;
     const dot = c.type!=='none' ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor[c.type]};margin-left:6px;flex-shrink:0"></span>` : '';
     return `<div style="padding:8px 12px;background:var(--s2);border-radius:8px;margin-bottom:4px">
       <div style="display:flex;align-items:center;gap:6px">
@@ -1612,7 +1649,7 @@ function renderConstraintSummary(agent) {
   const rows = DAYS.map(day => {
     const c = agent.constraints[day]||{type:'none',time:''};
     const opt = COPTS.find(o=>o.v===c.type)||COPTS[0];
-    const timeStr = c.time ? ` (${c.type==='late'?'משעה':'עד שעה'}: ${c.time})` : '';
+    const timeStr = c.type==='split'&&c.time ? (() => { const p=c.time.split('-'); return ` (${p[0]}–${p[1]} | ${p[2]}–${p[3]})`; })() : c.time ? ` (${c.type==='late'?'משעה':'עד שעה'}: ${c.time})` : '';
     return `<tr>
       <td style="padding:6px 14px;font-weight:700">יום ${day} ${WEEK_DATES[day].label}</td>
       <td style="padding:6px 10px">${opt.e} ${opt.l}${timeStr}</td>
@@ -2584,6 +2621,9 @@ function buildSchedule(agentList) {
 
       if (c.type === 'off') {
         dayOff.push(entry);
+      } else if (c.type === 'split') {
+        // פיצול משמרת — שים בשיחות/דיגיטל לפי סוג
+        if (isDigital) digital8.push(entry); else shift8.push(entry);
       } else if (isDigital || (agent.activity === 'מאוחדת' && agent.movementType === 'דיגיטל')) {
         // מובמנט דיגיטל — שתי שורות | מאוחדת דיגיטל — שורה אחת (08-17)
         const isMauchdetDig = (agent.activity === 'מאוחדת' && agent.movementType === 'דיגיטל');
@@ -2646,7 +2686,13 @@ function renderScheduleTable(sched, total, actFilter) {
   const pills = (list, cls) => list.length
     ? list.map(a => {
         const act = (!actFilter && a.activity) ? `<span class="pact"> · ${a.activity}</span>` : '';
-        const tm  = a.time ? `<span class="pact"> ${a.constraintType==='early'?'🏃':'😴'}${a.time}</span>` : '';
+        let tm = '';
+      if (a.time && a.constraintType === 'split') {
+        const p = a.time.split('-');
+        tm = `<span class="pact"> 🔀${p[0]||''}–${p[1]||''}<br>↩${p[2]||''}–${p[3]||''}</span>`;
+      } else if (a.time) {
+        tm = `<span class="pact"> ${a.constraintType==='early'?'🏃':'😴'}${a.time}</span>`;
+      }
         const agentObj = localAgents.find(x => x.fullName === a.name);
         const safeKey  = agentObj ? fbKey(agentObj.key) : '';
         const clickable = safeKey ? `onclick="openScheduleEdit('${safeKey}')" style="cursor:pointer" title="לחץ לעריכה"` : '';
@@ -3232,14 +3278,14 @@ async function approveAgent(key) {
 }
 
 function buildScheduleText(agent, assignedShifts) {
-  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת', split:'פיצול משמרת'};
   const actShift  = ACTIVITY_SHIFTS[agent.activity];
   let lines = [];
   DAYS.forEach(day => {
     const c  = agent.constraints[day]||{type:'none',time:''};
     const ms = agent.managerShift?.[day] || '';
     const label = COPTS_MAP[c.type]||'רגיל';
-    const timeStr = c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
+    const timeStr = c.type==='split'&&c.time ? (() => { const p=c.time.split('-'); return ` (${p[0]}–${p[1]} | ${p[2]}–${p[3]})`; })() : c.time ? ` (${c.type==='late'?'מ-':'עד '}${c.time})` : '';
     let shift = assignedShifts?.[day] || '';
     if (!shift) {
       if      (c.type === 'off')    shift = 'חופש';
@@ -3271,7 +3317,7 @@ function initEmailJS() {
 initEmailJS();
 
 function buildScheduleHTML(agent, assignedShifts) {
-  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת'};
+  const COPTS_MAP = {none:'רגיל', off:'חופש', late:'התחלה מאוחרת', early:'יציאה מוקדמת', split:'פיצול משמרת'};
   const actShift  = ACTIVITY_SHIFTS[agent.activity];
   const rows = DAYS.map(day => {
     const c  = agent.constraints[day]||{type:'none',time:''};
@@ -3716,6 +3762,15 @@ function openScheduleEdit(safeKey) {
     let timeH = '';
     if (val==='late')  timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--warn)">משעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
     if (val==='early') timeH = `<div class="time-cell" style="margin-top:4px"><span class="time-lbl" style="color:var(--green)">עד שעה:</span><input class="time-inp" type="time" min="08:00" max="18:00" value="${c.time||''}" id="me-${safeKey}-${day}"/></div>`;
+    if (val==='split') {
+      const parts = (c.time||'').split('-');
+      timeH = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 1:</span><input class="time-inp" type="time" value="${parts[0]||''}" id="me-s0-${safeKey}-${day}" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 1:</span><input class="time-inp" type="time" value="${parts[1]||''}" id="me-s1-${safeKey}-${day}" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">כניסה 2:</span><input class="time-inp" type="time" value="${parts[2]||''}" id="me-s2-${safeKey}-${day}" style="border-color:rgba(188,140,255,.6)"/></div>
+        <div class="time-cell"><span class="time-lbl" style="color:var(--purple)">יציאה 2:</span><input class="time-inp" type="time" value="${parts[3]||''}" id="me-s3-${safeKey}-${day}" style="border-color:rgba(188,140,255,.6)"/></div>
+      </div>`;
+    }
 
     // כפתורי שיחות/דיגיטל + משמרת — לכל מובמנט שאינו חופש
     let shiftToggleH = '';
@@ -3850,14 +3905,20 @@ async function saveModalEdit(safeKey, andApprove) {
     if (!agent) return;
     DAYS.forEach(day => {
       const sel   = document.getElementById(`ms-${safeKey}-${day}`);
-      const tinp  = document.getElementById(`me-${safeKey}-${day}`);
+      const type  = sel ? sel.value : 'none';
+      let time = '';
+      if (type === 'split') {
+        const p0 = document.getElementById(`me-s0-${safeKey}-${day}`)?.value || '';
+        const p1 = document.getElementById(`me-s1-${safeKey}-${day}`)?.value || '';
+        const p2 = document.getElementById(`me-s2-${safeKey}-${day}`)?.value || '';
+        const p3 = document.getElementById(`me-s3-${safeKey}-${day}`)?.value || '';
+        time = [p0,p1,p2,p3].join('-');
+      } else {
+        time = document.getElementById(`me-${safeKey}-${day}`)?.value || '';
+      }
       const ninp  = document.getElementById(`mnote-${safeKey}-${day}`);
       const existingNote = agent.constraints[day]?.note || '';
-      agent.constraints[day] = {
-        type: sel ? sel.value : 'none',
-        time: tinp ? tinp.value : '',
-        note: ninp ? ninp.value.trim() : existingNote
-      };
+      agent.constraints[day] = { type, time, note: ninp ? ninp.value.trim() : existingNote };
     });
     // managerShift is already updated live by modalShiftToggle
     agent.submitted = true;
