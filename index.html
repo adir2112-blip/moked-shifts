@@ -11,26 +11,30 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d1117;--surface:#161b22;--s2:#1f2937;--border:#30363d;
-  --accent:#58a6ff;--green:#3fb950;--warn:#f0883e;--danger:#ff7b72;--purple:#bc8cff;
-  --text:#e6edf3;--muted:#8b949e;--r:10px;
+  --bg:#dde1e7;--surface:#ffffff;--s2:#e7eaef;--border:#cfd5dd;
+  --accent:#3b6fd1;--green:#1f9d55;--warn:#c17d0a;--danger:#dc4444;--purple:#8a5fd6;
+  --text:#1c2128;--muted:#6b7280;--r:10px;
+  --shadow-rgb:30,41,59;--accent-rgb:59,111,209;
 }
+.shadow-sm{box-shadow:0 1px 2px rgba(var(--shadow-rgb),.05),0 6px 16px rgba(var(--shadow-rgb),.045)}
+.shadow-md{box-shadow:0 1px 2px rgba(var(--shadow-rgb),.05),0 8px 20px rgba(var(--shadow-rgb),.05)}
+.shadow-lg{box-shadow:0 2px 6px rgba(var(--shadow-rgb),.06),0 16px 36px rgba(var(--shadow-rgb),.09)}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .screen{display:none;min-height:100vh;padding:0}
 .screen.active{display:flex;flex-direction:column}
 #loginScreen{align-items:center;justify-content:center;padding:24px}
-.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;text-align:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;text-align:center;box-shadow:0 2px 6px rgba(var(--shadow-rgb),.06),0 16px 36px rgba(var(--shadow-rgb),.09)}
 .login-box h1{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-box .sub{color:var(--muted);font-size:.88rem;margin-bottom:28px}
 .login-role-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .role-tab{flex:1;padding:9px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
-.role-tab.active{background:var(--accent);color:#fff}
+.role-tab.active{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
 .field-grp{display:flex;flex-direction:column;gap:5px;text-align:right;margin-bottom:14px}
 .field-grp label{font-size:.78rem;color:var(--muted);font-weight:600}
-input.inp,select.inp{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.95rem;padding:10px 13px;outline:none;transition:border-color .2s;width:100%}
-input.inp:focus,select.inp:focus{border-color:var(--accent)}
+input.inp,select.inp{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.95rem;padding:10px 13px;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+input.inp:focus,select.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
 .err-msg{color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:8px;text-align:center}
-.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:700;transition:opacity .18s,transform .1s}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:700;transition:opacity .18s,transform .1s,box-shadow .18s;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.08),0 4px 10px rgba(var(--shadow-rgb),.08)}
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-success{background:var(--green);color:#fff}
@@ -40,26 +44,30 @@ input.inp:focus,select.inp:focus{border-color:var(--accent)}
 .btn-sm{padding:6px 14px;font-size:.82rem}
 .btn:hover{opacity:.88}
 .btn-full{width:100%;padding:12px}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.03)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo-chip{width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
 .topbar-title{font-weight:900;font-size:1rem;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .user-badge{display:flex;align-items:center;gap:8px;font-size:.85rem}
+.avatar{width:30px;height:30px;border-radius:50%;background:rgba(var(--accent-rgb),.14);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0}
 .role-chip{border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700}
 .role-agent{background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
 .role-manager{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3)}
 .main{flex:1;padding:24px 20px;max-width:1200px;width:100%;margin:0 auto}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.05),0 8px 20px rgba(var(--shadow-rgb),.05)}
 .card-title{font-size:1.05rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
 .tab-btn{padding:9px 22px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:500;transition:all .2s}
-.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.week-table{width:100%;border-collapse:separate;border-spacing:0 5px;font-size:.88rem}
+.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
+.week-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:.88rem}
 .week-table th{text-align:center;padding:6px 8px;color:var(--muted);font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .week-table th:first-child{text-align:right;padding-right:14px}
-.week-table td{background:var(--s2);text-align:center;padding:9px 8px;vertical-align:middle}
-.week-table td:first-child{border-radius:8px 0 0 8px;text-align:right;padding-right:14px;font-weight:700;width:100px}
-.week-table td:last-child{border-radius:0 8px 8px 0}
-select.csel{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.83rem;padding:5px 8px;cursor:pointer;outline:none;width:100%;max-width:158px}
-select.csel:focus{border-color:var(--accent)}
+.week-table td{background:var(--s2);text-align:center;padding:12px 8px;vertical-align:middle;border-top:1px solid var(--border);border-bottom:1px solid var(--border);transition:background .15s}
+.week-table tr:hover td{background:var(--surface)}
+.week-table td:first-child{border-radius:9px 0 0 9px;text-align:right;padding-right:16px;font-weight:700;width:110px;border-right:1px solid var(--border)}
+.week-table td:last-child{border-radius:0 9px 9px 0;border-left:1px solid var(--border)}
+select.csel{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.83rem;padding:5px 8px;cursor:pointer;outline:none;width:100%;max-width:158px;transition:border-color .2s,box-shadow .2s}
+select.csel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
 select.csel.v-off{color:var(--danger);border-color:rgba(255,123,114,.4)}
 select.csel.v-late{color:var(--warn);border-color:rgba(240,136,62,.4)}
 select.csel.v-early{color:var(--green);border-color:rgba(63,185,80,.4)}
@@ -73,8 +81,8 @@ input.time-inp::-webkit-calendar-picker-indicator{filter:invert(.55);cursor:poin
 .submitted-banner{background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4);border-radius:10px;padding:18px;text-align:center;color:var(--green);font-weight:700;font-size:1rem}
 .filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .filter-bar label{color:var(--muted);font-size:.85rem;font-weight:600}
-select.filter-sel{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.9rem;padding:8px 14px;outline:none;cursor:pointer;min-width:200px}
-select.filter-sel:focus{border-color:var(--accent)}
+select.filter-sel{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.9rem;padding:8px 14px;outline:none;cursor:pointer;min-width:200px;transition:border-color .2s,box-shadow .2s}
+select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
 .sch-wrapper{overflow-x:auto}
 .sch-table{width:100%;border-collapse:separate;border-spacing:4px;font-size:.82rem;min-width:720px}
 .sch-th-label{width:78px}
@@ -85,27 +93,27 @@ select.filter-sel:focus{border-color:var(--accent)}
 .lbl-9{background:rgba(88,166,255,.10);color:var(--accent);border-color:rgba(88,166,255,.28)}
 .lbl-off{background:rgba(255,123,114,.08);color:var(--danger);border-color:rgba(255,123,114,.25)}
 .sch-td{border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
-.td-8{background:rgba(63,185,80,.06)}.td-9{background:rgba(88,166,255,.05)}.td-off{background:rgba(255,123,114,.04)}
-.p8{background:rgba(63,185,80,.16);color:#7ee787;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
-.p9{background:rgba(88,166,255,.16);color:#79c0ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
-.poff{background:rgba(255,123,114,.14);color:var(--danger);border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.td-8{background:rgba(63,185,80,.09)}.td-9{background:rgba(88,166,255,.08)}.td-off{background:rgba(255,123,114,.07)}
+.p8{background:rgba(31,157,85,.22);color:#155c30;border:1px solid rgba(31,157,85,.4);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
+.p9{background:rgba(59,111,209,.20);color:#163f80;border:1px solid rgba(59,111,209,.4);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
+.poff{background:rgba(220,68,68,.20);color:#8f2b2b;border:1px solid rgba(220,68,68,.4);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
 .pact{font-size:.69rem;opacity:.65}.no-one{color:var(--muted);font-size:.78rem;font-style:italic}
 .pill-clickable:hover{opacity:.8;transform:scale(1.04);transition:all .15s}
 /* edit modal */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 24px rgba(var(--shadow-rgb),.12),0 24px 48px rgba(var(--shadow-rgb),.14)}
 .modal-title{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
 .modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
 .modal-close:hover{color:var(--text);background:var(--s2)}
 /* digital rows */
-.td-d8{background:rgba(188,140,255,.06);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
-.td-d9{background:rgba(188,140,255,.04);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
-.lbl-d8{background:rgba(188,140,255,.12);color:var(--purple);border-color:rgba(188,140,255,.3)}
-.lbl-d9{background:rgba(188,140,255,.08);color:var(--purple);border-color:rgba(188,140,255,.22)}
-.pd8{background:rgba(188,140,255,.18);color:#d2a8ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
-.pd9{background:rgba(188,140,255,.12);color:#d2a8ff;border-radius:5px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:500}
+.td-d8{background:rgba(13,148,136,.10);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
+.td-d9{background:rgba(138,95,214,.08);border-radius:8px;padding:9px 8px;vertical-align:top;border:1px solid var(--border);min-width:115px}
+.lbl-d8{background:rgba(13,148,136,.14);color:#0f766e;border-color:rgba(13,148,136,.35)}
+.lbl-d9{background:rgba(188,140,255,.12);color:var(--purple);border-color:rgba(188,140,255,.3)}
+.pd8{background:rgba(13,148,136,.22);color:#0f5d54;border:1px solid rgba(13,148,136,.42);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
+.pd9{background:rgba(138,95,214,.22);color:#4d2e94;border:1px solid rgba(138,95,214,.42);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
 .agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
-.agent-row{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.agent-row{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
 .agent-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .agent-name{font-weight:700;font-size:.9rem}
 .act-badge{display:inline-block;background:rgba(188,140,255,.14);border:1px solid rgba(188,140,255,.3);color:var(--purple);border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:600}
@@ -117,7 +125,7 @@ select.filter-sel:focus{border-color:var(--accent)}
 .pending-dot{display:inline-block;background:var(--warn);color:#fff;border-radius:20px;padding:0 7px;font-size:.72rem;font-weight:700;margin-right:4px}
 .download-bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
 .stats-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.stat-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:.83rem}
+.stat-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:.83rem;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
 .stat-chip span{font-weight:700;color:var(--accent)}
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty .ico{font-size:2.8rem;margin-bottom:10px}
@@ -133,9 +141,9 @@ select.filter-sel:focus{border-color:var(--accent)}
 .pin-key-del{color:var(--muted);font-size:1rem}
 .pin-key-cancel{color:var(--muted);font-size:.82rem}
 .dept-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;transition:all .18s}
-.dept-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.agent-card{padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .18s;font-size:.84rem;font-weight:600;color:var(--text)}
-.agent-card:hover{border-color:var(--accent);background:rgba(88,166,255,.08);transform:translateY(-2px)}
+.dept-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
+.agent-card{padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .18s;font-size:.84rem;font-weight:600;color:var(--text);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
+.agent-card:hover{border-color:var(--accent);background:rgba(88,166,255,.08);transform:translateY(-2px);box-shadow:0 6px 16px rgba(var(--shadow-rgb),.1)}
 .agent-card .initials{width:38px;height:38px;border-radius:50%;background:rgba(88,166,255,.15);color:var(--accent);font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
 @media(max-width:768px){
   .main{padding:12px 10px}
@@ -182,12 +190,15 @@ select.filter-sel:focus{border-color:var(--accent)}
 
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
-  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
+  <div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:radial-gradient(circle at 12% 12%,rgba(var(--accent-rgb),.07),transparent 42%),radial-gradient(circle at 88% 85%,rgba(31,157,85,.06),transparent 42%),var(--bg)">
 
     <!-- בחירת תפקיד -->
-    <div style="width:100%;max-width:600px">
+    <div style="width:100%;max-width:960px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 48px;box-shadow:0 2px 6px rgba(var(--shadow-rgb),.06),0 20px 44px rgba(var(--shadow-rgb),.09)">
       <div style="text-align:center;margin-bottom:24px">
-        <h1 style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">🖥️ מוקד – סידור עבודה</h1>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
+          <div class="logo-chip" style="width:40px;height:40px;border-radius:12px"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.5"/><path d="M3 8h14"/><path d="M6.5 2.5v3M13.5 2.5v3"/></svg></div>
+          <h1 style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0">מוקד – סידור עבודה</h1>
+        </div>
         <p style="color:var(--muted);font-size:.88rem">התחבר למערכת</p>
       </div>
 
@@ -202,26 +213,24 @@ select.filter-sel:focus{border-color:var(--accent)}
         <input type="text" id="agentSearchInp" placeholder="🔍 הקש את שמך..."
           oninput="renderAgentGrid()"
           autocomplete="off" name="search-fake"
-          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;padding:10px 14px;outline:none;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.06)"/>
+          style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;padding:10px 14px;outline:none;margin-bottom:6px"/>
         <p style="font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:12px">לאחר בחירת שמך תתבקש להזין 4 ספרות אחרונות של ת"ז</p>
-        <div id="agentGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:350px;overflow-y:auto"></div>
+        <div id="agentGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;max-height:380px;overflow-y:auto;padding:2px"></div>
         <div class="err-msg" id="loginErr" style="margin-top:10px"></div>
       </div>
 
       <!-- מנהל: מייל + סיסמה -->
-      <div id="managerLoginSection" style="display:none;max-width:360px;margin:0 auto">
-        <div class="login-box" style="padding:28px">
-          <div class="field-grp">
-            <label>מייל</label>
-            <input class="inp" type="email" id="loginEmail" placeholder="manager@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
-          </div>
-          <div class="field-grp">
-            <label>סיסמה</label>
-            <input class="inp" type="password" id="loginPass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-          </div>
-          <div class="err-msg" id="loginErrMgr"></div>
-          <button class="btn btn-primary btn-full" onclick="doLogin()">כניסה →</button>
+      <div id="managerLoginSection" style="display:none;max-width:340px;margin:0 auto">
+        <div class="field-grp">
+          <label>מייל</label>
+          <input class="inp" type="email" id="loginEmail" placeholder="manager@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
         </div>
+        <div class="field-grp">
+          <label>סיסמה</label>
+          <input class="inp" type="password" id="loginPass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <div class="err-msg" id="loginErrMgr"></div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">כניסה →</button>
       </div>
 
       <p style="text-align:center;color:var(--muted);font-size:.78rem;font-weight:700;margin-top:24px">✦ נבנה על ידי אדיר לוי ✦</p>
@@ -233,7 +242,7 @@ select.filter-sel:focus{border-color:var(--accent)}
 <div id="pinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px 28px;width:100%;max-width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <div id="pinAgentName" style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:4px"></div>
-    <div style="font-size:.82rem;color:var(--muted);margin-bottom:22px">הזן קוד PIN</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:22px;max-width:220px;margin-inline:auto">הזן את 4 הספרות האחרונות של מספר תעודת הזהות שלך</div>
     <div id="pinDots" style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">
       <div id="dot0" class="pin-dot"></div><div id="dot1" class="pin-dot"></div>
       <div id="dot2" class="pin-dot"></div><div id="dot3" class="pin-dot"></div>
@@ -281,7 +290,7 @@ select.filter-sel:focus{border-color:var(--accent)}
 </div>
 
 <div id="editModal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeScheduleEdit()">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:560px">
     <div class="modal-title">
       <span id="editModalTitle">✏️ עריכת אילוצים</span>
       <button class="modal-close" onclick="closeScheduleEdit()">✕</button>
@@ -304,9 +313,10 @@ select.filter-sel:focus{border-color:var(--accent)}
 <!-- AGENT SCREEN -->
 <div id="agentScreen" class="screen">
   <div class="topbar">
-    <span class="topbar-title">🖥️ מוקד – סידור עבודה</span>
+    <div class="brand"><div class="logo-chip"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.5"/><path d="M3 8h14"/><path d="M6.5 2.5v3M13.5 2.5v3"/></svg></div><span class="topbar-title">מוקד – סידור עבודה</span></div>
     <div class="user-badge">
       <span style="color:var(--muted);font-size:.78rem;font-weight:700;letter-spacing:.3px">✦ אדיר לוי</span>
+      <span class="avatar" id="agentAvatar">-</span>
       <span id="agentNameTag">-</span>
       <span class="role-chip role-agent">נציג</span>
       <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="logout()">יציאה</button>
@@ -318,9 +328,10 @@ select.filter-sel:focus{border-color:var(--accent)}
 <!-- MANAGER SCREEN -->
 <div id="managerScreen" class="screen">
   <div class="topbar">
-    <span class="topbar-title">🖥️ מוקד – סידור עבודה</span>
+    <div class="brand"><div class="logo-chip"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.5"/><path d="M3 8h14"/><path d="M6.5 2.5v3M13.5 2.5v3"/></svg></div><span class="topbar-title">מוקד – סידור עבודה</span></div>
     <div class="user-badge">
       <span style="color:var(--muted);font-size:.78rem;font-weight:700;letter-spacing:.3px">✦ אדיר לוי</span>
+      <span class="avatar" id="managerAvatar">-</span>
       <span id="managerNameTag">-</span>
       <span class="role-chip role-manager">מנהל</span>
       <button class="btn btn-sm" style="background:var(--s2);color:var(--muted)" onclick="logout()">יציאה</button>
@@ -384,15 +395,20 @@ const ACTIVITY_SHIFTS = {
 
 // צבעים לכל פעילות
 const ACTIVITY_COLORS = {
-  'מובמנט':            { bg:'rgba(63,185,80,.15)',   border:'rgba(63,185,80,.4)',   text:'#7ee787',  hex:'#3fb950' },
-  'מאוחדת':            { bg:'rgba(88,166,255,.15)',   border:'rgba(88,166,255,.4)',  text:'#79c0ff',  hex:'#58a6ff' },
-  'פריפיט שירות':      { bg:'rgba(240,136,62,.15)',   border:'rgba(240,136,62,.4)', text:'#ffa657',  hex:'#f0883e' },
-  'פריפיט מכירות':     { bg:'rgba(255,123,114,.15)',  border:'rgba(255,123,114,.4)',text:'#ff9492',  hex:'#ff7b72' },
-  'מחלקת סחר':         { bg:'rgba(188,140,255,.15)',  border:'rgba(188,140,255,.4)',text:'#d2a8ff',  hex:'#bc8cff' },
-  'מעוף לעמית מכירות': { bg:'rgba(255,212,59,.15)',   border:'rgba(255,212,59,.4)', text:'#ffd43b',  hex:'#ffd43b' },
-  'הולנדיה':            { bg:'rgba(20,200,200,.15)',   border:'rgba(20,200,200,.4)', text:'#14c8c8',  hex:'#14c8c8' },
+  'מובמנט':            { bg:'rgba(63,185,80,.15)',   border:'rgba(63,185,80,.4)',   text:'#1a7a3c',  hex:'#3fb950' },
+  'מאוחדת':            { bg:'rgba(88,166,255,.15)',   border:'rgba(88,166,255,.4)',  text:'#1a56b0',  hex:'#58a6ff' },
+  'פריפיט שירות':      { bg:'rgba(240,136,62,.15)',   border:'rgba(240,136,62,.4)', text:'#9a5a1f',  hex:'#f0883e' },
+  'פריפיט מכירות':     { bg:'rgba(255,123,114,.15)',  border:'rgba(255,123,114,.4)',text:'#b83a30',  hex:'#ff7b72' },
+  'מחלקת סחר':         { bg:'rgba(188,140,255,.15)',  border:'rgba(188,140,255,.4)',text:'#6b3fc9',  hex:'#bc8cff' },
+  'מעוף לעמית מכירות': { bg:'rgba(255,212,59,.15)',   border:'rgba(255,212,59,.4)', text:'#8a6d00',  hex:'#ffd43b' },
+  'הולנדיה':            { bg:'rgba(20,200,200,.15)',   border:'rgba(20,200,200,.4)', text:'#0e7a7a',  hex:'#14c8c8' },
 };
 function actColor(activity) { return ACTIVITY_COLORS[activity] || { bg:'rgba(139,148,158,.15)', border:'rgba(139,148,158,.3)', text:'var(--muted)', hex:'#8b949e' }; }
+function getInitials(name) {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0]||'') + (parts[1]?.[0]||'')).toUpperCase();
+}
 
 let currentRole = 'agent';
 let currentUser = null;
@@ -1229,6 +1245,7 @@ async function loginAsAgent(key) {
   showLoading('מתחבר...');
   try {
     document.getElementById('agentNameTag').textContent = currentUser.fullName;
+    document.getElementById('agentAvatar').textContent = getInitials(currentUser.fullName);
     showScreen('agentScreen');
     await renderAgentContent();
   } catch(e) {
@@ -1305,6 +1322,7 @@ async function enterAgent() {
   showLoading('מתחבר...');
   try {
     document.getElementById('agentNameTag').textContent = currentUser.fullName;
+    document.getElementById('agentAvatar').textContent = getInitials(currentUser.fullName);
     showScreen('agentScreen');
     await renderAgentContent();
   } catch(e) {
@@ -1430,11 +1448,12 @@ function renderAgentEditForm(agent, container) {
     }
     const showNote = val !== 'none';
     const noteH = showNote ? `<input type="text" placeholder="הערה (חובה)" maxlength="60" value="${(c.note||'').replace(/"/g,'&quot;')}" id="note-${day}" onchange="agentSetNote('${day}',this.value)" style="margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem;padding:7px 10px;outline:none"/>` : '';
+    const stateColor = val==='off'?'var(--danger)':val==='late'?'var(--warn)':val==='early'?'var(--green)':val==='split'?'var(--purple)':'var(--border)';
 
     if (isMobile) {
       // מובייל — כרטיס לכל יום
-      const borderColor = val==='off'?'rgba(255,59,48,.3)':val==='late'?'rgba(255,149,0,.3)':val==='early'?'rgba(52,199,89,.3)':'var(--border)';
-      return `<div style="background:var(--surface);border:1.5px solid ${borderColor};border-radius:12px;padding:14px;margin-bottom:10px">
+      const borderColor = val==='off'?'rgba(220,68,68,.35)':val==='late'?'rgba(193,125,10,.35)':val==='early'?'rgba(31,157,85,.35)':val==='split'?'rgba(138,95,214,.35)':'var(--border)';
+      return `<div style="background:var(--surface);border:1.5px solid ${borderColor};border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-weight:700;font-size:.95rem">יום ${day}</span>
           <span style="font-size:.78rem;color:var(--muted)">${WEEK_DATES[day].label}</span>
@@ -1446,9 +1465,9 @@ function renderAgentEditForm(agent, container) {
     }
 
     return `<tr>
-      <td>יום ${day}<br><span style="font-size:.72rem;color:var(--muted);font-weight:400">${WEEK_DATES[day].label}</span></td>
-      <td><select class="csel v-${val}" id="csel-${day}" onchange="agentSetType('${day}',this.value)">${opts}</select></td>
-      <td id="tcell-${day}" style="min-width:155px">${timeH}${noteH}</td>
+      <td style="box-shadow:inset -3px 0 0 ${stateColor}">יום ${day}<br><span style="font-size:.72rem;color:var(--muted);font-weight:400">${WEEK_DATES[day].label}</span></td>
+      <td><select class="csel v-${val}" id="csel-${day}" onchange="agentSetType('${day}',this.value)" style="max-width:180px;font-weight:600">${opts}</select></td>
+      <td id="tcell-${day}" style="min-width:155px">${timeH || (noteH ? '' : '<span style="color:var(--muted);font-size:.78rem">— אין שינוי בשעות —</span>')}${noteH}</td>
     </tr>`;
   }).join('');
 
@@ -1666,6 +1685,7 @@ async function enterManager() {
   showLoading('טוען נתונים...');
   try {
     document.getElementById('managerNameTag').textContent = currentUser.fullName;
+    document.getElementById('managerAvatar').textContent = getInitials(currentUser.fullName);
     showScreen('managerScreen');
     // הסתר טאב מנהלים ממנהלים שאינם אדמין
     const managersTab = document.getElementById('mgTab8');
@@ -2929,7 +2949,7 @@ function downloadAsImage() {
   const doCapture = () => {
     const filterEl = document.getElementById('actFilter');
     const fname = `סידור_${(filterEl&&filterEl.value)||'כולן'}.png`;
-    html2canvas(el, {backgroundColor:'#161b22', scale:2, useCORS:true}).then(canvas => {
+    html2canvas(el, {backgroundColor:'#ffffff', scale:2, useCORS:true}).then(canvas => {
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png'); a.download = fname; a.click();
     });
@@ -3781,28 +3801,28 @@ function openScheduleEdit(safeKey) {
       const s9 = curIsDigital ? 'd9' : '9';
 
       const callBtn = `<button onclick="toggleMovementType('${safeKey}','${day}','שיחות')"
-          style="padding:3px 10px;border-radius:6px;border:1px solid ${!curIsDigital?'var(--warn)':'var(--border)'};
+          style="padding:3px 8px;border-radius:6px;border:1px solid ${!curIsDigital?'var(--warn)':'var(--border)'};
           background:${!curIsDigital?'rgba(240,136,62,.15)':'var(--bg)'};color:${!curIsDigital?'var(--warn)':'var(--muted)'};
-          font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:${!curIsDigital?'700':'400'}">📞 שיחות</button>`;
+          font-size:.72rem;white-space:nowrap;cursor:pointer;font-family:inherit;font-weight:${!curIsDigital?'700':'400'}">📞 שיחות</button>`;
       const digBtn = `<button onclick="toggleMovementType('${safeKey}','${day}','דיגיטל')"
-          style="padding:3px 10px;border-radius:6px;border:1px solid ${curIsDigital?'var(--purple)':'var(--border)'};
+          style="padding:3px 8px;border-radius:6px;border:1px solid ${curIsDigital?'var(--purple)':'var(--border)'};
           background:${curIsDigital?'rgba(188,140,255,.15)':'var(--bg)'};color:${curIsDigital?'var(--purple)':'var(--muted)'};
-          font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:${curIsDigital?'700':'400'}">💻 דיגיטל</button>`;
+          font-size:.72rem;white-space:nowrap;cursor:pointer;font-family:inherit;font-weight:${curIsDigital?'700':'400'}">💻 דיגיטל</button>`;
 
       let shiftBtns = '';
       if (val === 'none') {
         const shift8Btn = `<button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s8}')"
-            style="padding:3px 10px;border-radius:6px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
+            style="padding:3px 8px;border-radius:6px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
             background:${ms===s8?'rgba(63,185,80,.15)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};
-            font-size:.75rem;cursor:pointer;font-family:inherit">08–17</button>`;
+            font-size:.72rem;white-space:nowrap;cursor:pointer;font-family:inherit">08–17</button>`;
         const shift9Btn = `<button id="mb9-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s9}')"
-            style="padding:3px 10px;border-radius:6px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};
+            style="padding:3px 8px;border-radius:6px;border:1px solid ${ms===s9?'var(--accent)':'var(--border)'};
             background:${ms===s9?'rgba(88,166,255,.15)':'var(--bg)'};color:${ms===s9?'var(--accent)':'var(--muted)'};
-            font-size:.75rem;cursor:pointer;font-family:inherit">09–18</button>`;
-        shiftBtns = `<span style="font-size:.72rem;color:var(--muted);padding-top:3px">⏰</span>${shift8Btn}${shift9Btn}`;
+            font-size:.72rem;white-space:nowrap;cursor:pointer;font-family:inherit">09–18</button>`;
+        shiftBtns = `<span style="font-size:.7rem;color:var(--muted);padding-top:3px;flex-shrink:0">⏰</span>${shift8Btn}${shift9Btn}`;
       }
 
-      shiftToggleH = `<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center">
+      shiftToggleH = `<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:nowrap;align-items:center;overflow-x:auto">
         ${callBtn}${digBtn}${shiftBtns}
       </div>`;
     }
@@ -4153,7 +4173,7 @@ function shuffleArray(arr) {
   setRole('agent');
 })();
 </script>
-<div id="undoBar" style="display:none;position:fixed;bottom:20px;right:50%;transform:translateX(50%);background:#1f2937;border:1px solid var(--accent);border-radius:10px;padding:12px 20px;z-index:99999;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.5)">
+<div id="undoBar" style="display:none;position:fixed;bottom:20px;right:50%;transform:translateX(50%);background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px 20px;z-index:99999;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.25)">
   <span id="undoMsg" style="color:var(--text);font-size:.88rem"></span>
   <button id="undoBtn" onclick="executeUndo()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">↩ בטל</button>
   <div id="undoTimer" style="width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div id="undoBar2" style="height:100%;background:var(--accent);transition:width linear"></div></div>
