@@ -113,7 +113,7 @@ select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var
 .pd8{background:rgba(13,148,136,.22);color:#0f5d54;border:1px solid rgba(13,148,136,.42);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
 .pd9{background:rgba(138,95,214,.22);color:#4d2e94;border:1px solid rgba(138,95,214,.42);border-radius:6px;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;margin:2px;font-size:.77rem;font-weight:700}
 .agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
-.agent-row{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
+.agent-row{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.05),0 6px 14px rgba(var(--shadow-rgb),.045)}
 .agent-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .agent-name{font-weight:700;font-size:.9rem}
 .act-badge{display:inline-block;background:rgba(188,140,255,.14);border:1px solid rgba(188,140,255,.3);color:var(--purple);border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:600}
@@ -130,10 +130,12 @@ select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty .ico{font-size:2.8rem;margin-bottom:10px}
 /* loading overlay */
-.loading-overlay{position:fixed;inset:0;background:rgba(13,17,23,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:14px}
+.loading-overlay{position:fixed;inset:0;background:rgba(30,34,41,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:14px}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-txt{color:var(--muted);font-size:.9rem}
+.loading-overlay .spinner{border-color:rgba(255,255,255,.25);border-top-color:#fff}
+.loading-overlay .loading-txt{color:rgba(255,255,255,.9)}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .15s}
 .pin-dot.filled{background:var(--accent);border-color:var(--accent)}
 .pin-key{padding:15px;border-radius:12px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-family:inherit;font-size:1.2rem;font-weight:700;cursor:pointer;transition:all .1s}
@@ -1542,8 +1544,8 @@ function agentShowReview() {
 
   agentDraft = draft;
 
-  const typeColor = {none:'var(--muted)', off:'var(--green)', late:'var(--warn)', early:'var(--accent)'};
-  const typeStyle = {none:'', off:'color:var(--green);font-weight:700', late:'color:var(--warn);font-weight:700', early:'color:var(--green);font-weight:700'};
+  const typeColor = {none:'var(--muted)', off:'var(--danger)', late:'var(--warn)', early:'var(--green)', split:'var(--purple)'};
+  const typeStyle = {none:'', off:'color:var(--danger);font-weight:700', late:'color:var(--warn);font-weight:700', early:'color:var(--green);font-weight:700', split:'color:var(--purple);font-weight:700'};
   const actShiftLabel = ACTIVITY_SHIFTS[currentUser?.activity]?.single || null;
   const mvType = currentUser?.movementType || 'שיחות';
   const SHIFT_MAP = {
@@ -1988,7 +1990,7 @@ async function renderScheduleHistory() {
       const rowTakanim = days.map(d => {
         const tot = d.takanim||0;
         const color = tot>=4?'var(--green)':tot>=2?'var(--warn)':'var(--danger)';
-        return `<td class="sch-td" style="text-align:center;vertical-align:middle;background:rgba(255,255,255,.03)">
+        return `<td class="sch-td" style="text-align:center;vertical-align:middle;background:var(--s2)">
           <div style="font-size:1rem;font-weight:900;color:${color}">${fmtT(tot)}</div>
           <div style="font-size:.65rem;color:var(--muted)">תקנים</div>
         </td>`;
@@ -2009,7 +2011,7 @@ async function renderScheduleHistory() {
                 ${digitalRows}
                 <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowOff}</tr>
                 <tr>
-                  <td class="sch-row-label" style="background:rgba(255,255,255,.04);color:var(--muted);font-size:.7rem">📊<br>תקנים</td>
+                  <td class="sch-row-label" style="background:var(--s2);color:var(--muted);font-size:.7rem">📊<br>תקנים</td>
                   ${rowTakanim}
                 </tr>
               </tbody>
@@ -2769,7 +2771,7 @@ function renderScheduleTable(sched, total, actFilter) {
     const t = sched[d].takanim || {};
     const tot = t.total || 0;
     const color = tot >= 4 ? 'var(--green)' : tot >= 2 ? 'var(--warn)' : 'var(--danger)';
-    return `<td class="sch-td" style="background:rgba(255,255,255,.03);text-align:center;vertical-align:middle">
+    return `<td class="sch-td" style="background:var(--s2);text-align:center;vertical-align:middle">
       <div style="font-size:1.1rem;font-weight:900;color:${color}">${fmtT(tot)}</div>
       <div style="font-size:.68rem;color:var(--muted);margin-top:2px">תקנים</div>
     </td>`;
@@ -2801,7 +2803,7 @@ function renderScheduleTable(sched, total, actFilter) {
             ${digitalRows}
             <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowO}</tr>
             <tr>
-              <td class="sch-row-label" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:var(--muted);font-size:.7rem">📊<br>כמות<br>תקנים</td>
+              <td class="sch-row-label" style="background:var(--s2);border-color:var(--border);color:var(--muted);font-size:.7rem">📊<br>כמות<br>תקנים</td>
               ${rowTakanim}
             </tr>
           </tbody>
@@ -3048,8 +3050,8 @@ function buildAgentCard(agent) {
   const sub = agent.submitted, appr = agent.approved;
   const safeKey = fbKey(agent.key);
   const isMovement = agent.activity === 'מובמנט' || ACTIVITY_SHIFTS[agent.activity]?.hasDigital;
-  const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--accent2)'};
-  const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
+  const typeColor = {none:'var(--muted)',off:'var(--danger)',late:'var(--warn)',early:'var(--green)',split:'var(--purple)'};
+  const typeStyle = {none:'',off:'font-weight:700;color:var(--danger)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)',split:'font-weight:700;color:var(--purple)'};
 
   const dayRows = sub
     ? DAYS.map(day => {
@@ -3070,7 +3072,7 @@ function buildAgentCard(agent) {
           shiftToggle = `<div style="display:flex;gap:4px;margin-right:4px">${btn8}${btn9}</div>`;
         }
 
-        return `<div style="display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);flex-wrap:wrap">
+        return `<div style="display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
           <span style="color:var(--muted);font-size:.78rem;min-width:52px;flex-shrink:0">יום ${day}</span>
           <span style="color:var(--border);font-size:.78rem">·</span>
           ${dot}
@@ -3106,7 +3108,13 @@ function buildAgentCard(agent) {
   const _ac = actColor(agent.activity);
   const actBadge = agent.activity ? `<span class="act-badge" style="background:${_ac.bg};border-color:${_ac.border};color:${_ac.text}">🏷 ${agent.activity}${agent.movementType ? ' · '+agent.movementType : ''}</span>` : '';
   return `<div class="agent-row" id="ar-${safeKey}">
-    <div class="agent-row-top"><span class="agent-name">👤 ${agent.fullName}</span>${statusBadge}</div>
+    <div class="agent-row-top">
+      <span class="agent-name" style="display:flex;align-items:center;gap:8px">
+        <span class="avatar" style="width:26px;height:26px;font-size:.62rem">${getInitials(agent.fullName)}</span>
+        ${agent.fullName}
+      </span>
+      ${statusBadge}
+    </div>
     ${actBadge}
     <div style="margin-top:8px" id="csummary-${safeKey}">${dayRows}</div>
     <div id="editpanel-${safeKey}" style="display:none"></div>
@@ -3144,14 +3152,14 @@ async function setManagerShift(key, day, shift) {
 
 function buildDayRows(agent) {
   if (!agent.submitted) return `<span style="color:var(--muted);font-size:.82rem">טרם הגיש אילוצים</span>`;
-  const typeColor = {none:'var(--muted)',off:'var(--green)',late:'var(--warn)',early:'var(--green)'};
-  const typeStyle = {none:'',off:'font-weight:700;color:var(--green)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)'};
+  const typeColor = {none:'var(--muted)',off:'var(--danger)',late:'var(--warn)',early:'var(--green)',split:'var(--purple)'};
+  const typeStyle = {none:'',off:'font-weight:700;color:var(--danger)',late:'font-weight:700;color:var(--warn)',early:'font-weight:700;color:var(--green)',split:'font-weight:700;color:var(--purple)'};
   return DAYS.map(day => {
     const c = agent.constraints[day]||{type:'none',time:''};
     const o = COPTS.find(x=>x.v===c.type)||COPTS[0];
     const t = c.time ? ` מ-${c.time}` : '';
     const dot = c.type!=='none' ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${typeColor[c.type]};margin-left:5px;flex-shrink:0"></span>` : '';
-    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--muted);font-size:.78rem;min-width:52px;flex-shrink:0">יום ${day}</span>
       <span style="color:var(--border);font-size:.78rem">·</span>${dot}
       <span style="font-size:.8rem;${typeStyle[c.type]||''}">${o.e} ${o.l}${t}</span>
@@ -3475,7 +3483,7 @@ function openManualAgentPopup(activity) {
 
   const dayRows = DAYS.map(day => {
     if (isSingle) {
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--muted);font-size:.8rem;min-width:75px;flex-shrink:0">יום ${day} <span style="font-size:.7rem">${WEEK_DATES[day].label}</span></span>
         <select id="mpop-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
           <option value="auto">אוטומטי — ${shiftLabel}</option>
@@ -3483,7 +3491,7 @@ function openManualAgentPopup(activity) {
         </select>
       </div>`;
     }
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--muted);font-size:.8rem;min-width:75px;flex-shrink:0">יום ${day} <span style="font-size:.7rem">${WEEK_DATES[day].label}</span></span>
       <select id="mpop-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
         <option value="auto">אוטומטי (08–17 או 09–18)</option>
@@ -3598,7 +3606,7 @@ function openAddManualAgent(activity) {
   const dayRows = DAYS.map(day => {
     if (isSingle) {
       // פעילות עם שורה אחת — רק חופש / עובד
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--muted);font-size:.8rem;min-width:70px">יום ${day}</span>
         <select id="man-shift-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
           <option value="work">עובד — ${shiftLabel}</option>
@@ -3606,7 +3614,7 @@ function openAddManualAgent(activity) {
         </select>
       </div>`;
     }
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--muted);font-size:.8rem;min-width:70px">יום ${day}</span>
       <select id="man-shift-${day}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.82rem;padding:4px 8px;flex:1">
         <option value="8">☀️ 08:00–17:00</option>
@@ -4025,7 +4033,7 @@ function renderHistory() {
     const actC = actColor(h.activity);
     const rows = h.snapshot.map(s => {
       const all = [...s.shift8, ...s.shift9, ...s.digital8, ...s.digital9];
-      return `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem">
+      return `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.8rem">
         <span style="color:var(--muted);min-width:50px">יום ${s.day}</span>
         <span style="color:var(--text)">${all.join(', ') || '—'}</span>
         ${s.dayOff.length ? `<span style="color:var(--danger);margin-right:auto">🏖 ${s.dayOff.join(', ')}</span>` : ''}
