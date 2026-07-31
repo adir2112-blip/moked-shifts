@@ -28,21 +28,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
 .login-box .sub{color:var(--muted);font-size:.88rem;margin-bottom:28px}
 .login-role-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .role-tab{flex:1;padding:9px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.role-tab:hover:not(.active){background:var(--s2);color:var(--text)}
 .role-tab.active{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
 .field-grp{display:flex;flex-direction:column;gap:5px;text-align:right;margin-bottom:14px}
 .field-grp label{font-size:.78rem;color:var(--muted);font-weight:600}
 input.inp,select.inp{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.95rem;padding:10px 13px;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
 input.inp:focus,select.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
 .err-msg{color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:8px;text-align:center}
-.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:700;transition:opacity .18s,transform .1s,box-shadow .18s;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.08),0 4px 10px rgba(var(--shadow-rgb),.08)}
-.btn:active{transform:scale(.97)}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:700;transition:opacity .18s,transform .12s,box-shadow .18s;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.08),0 4px 10px rgba(var(--shadow-rgb),.08)}
+.btn:active{transform:scale(.97) translateY(0)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-success{background:var(--green);color:#fff}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-warn{background:var(--warn);color:#fff}
 .btn-purple{background:var(--purple);color:#fff}
 .btn-sm{padding:6px 14px;font-size:.82rem}
-.btn:hover{opacity:.88}
+.btn:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 2px 4px rgba(var(--shadow-rgb),.1),0 8px 18px rgba(var(--shadow-rgb),.12)}
+.btn:focus-visible,.tab-btn:focus-visible,.dept-btn:focus-visible,.role-tab:focus-visible,input:focus-visible,select:focus-visible,.agent-card:focus-visible,.pill-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn-full{width:100%;padding:12px}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.03)}
 .brand{display:flex;align-items:center;gap:10px}
@@ -58,6 +60,7 @@ input.inp:focus,select.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px
 .card-title{font-size:1.05rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
 .tab-btn{padding:9px 22px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:500;transition:all .2s}
+.tab-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.06)}
 .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
 .week-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:.88rem}
 .week-table th{text-align:center;padding:6px 8px;color:var(--muted);font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
@@ -68,6 +71,7 @@ input.inp:focus,select.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px
 .week-table td:last-child{border-radius:0 9px 9px 0;border-left:1px solid var(--border)}
 select.csel{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.83rem;padding:5px 8px;cursor:pointer;outline:none;width:100%;max-width:158px;transition:border-color .2s,box-shadow .2s}
 select.csel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
+select.csel:hover{border-color:var(--accent)}
 select.csel.v-off{color:var(--danger);border-color:rgba(255,123,114,.4)}
 select.csel.v-late{color:var(--warn);border-color:rgba(240,136,62,.4)}
 select.csel.v-early{color:var(--green);border-color:rgba(63,185,80,.4)}
@@ -83,6 +87,7 @@ input.time-inp::-webkit-calendar-picker-indicator{filter:invert(.55);cursor:poin
 .filter-bar label{color:var(--muted);font-size:.85rem;font-weight:600}
 select.filter-sel{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.9rem;padding:8px 14px;outline:none;cursor:pointer;min-width:200px;transition:border-color .2s,box-shadow .2s}
 select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16)}
+select.filter-sel:hover{border-color:var(--accent)}
 .sch-wrapper{overflow-x:auto}
 .sch-table{width:100%;border-collapse:separate;border-spacing:4px;font-size:.82rem;min-width:720px}
 .sch-th-label{width:78px}
@@ -128,7 +133,8 @@ select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var
 .stat-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:.83rem;box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
 .stat-chip span{font-weight:700;color:var(--accent)}
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
-.empty .ico{font-size:2.8rem;margin-bottom:10px}
+.empty .ico{font-size:2.2rem;width:64px;height:64px;line-height:64px;border-radius:50%;background:var(--s2);border:1px solid var(--border);margin:0 auto 14px;display:block}
+.empty p{font-size:.92rem}
 /* loading overlay */
 .loading-overlay{position:fixed;inset:0;background:rgba(30,34,41,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:14px}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
@@ -143,6 +149,7 @@ select.filter-sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var
 .pin-key-del{color:var(--muted);font-size:1rem}
 .pin-key-cancel{color:var(--muted);font-size:.82rem}
 .dept-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;transition:all .18s}
+.dept-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.06)}
 .dept-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.1),0 4px 10px rgba(var(--shadow-rgb),.12)}
 .agent-card{padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .18s;font-size:.84rem;font-weight:600;color:var(--text);box-shadow:0 1px 2px rgba(var(--shadow-rgb),.04)}
 .agent-card:hover{border-color:var(--accent);background:rgba(88,166,255,.08);transform:translateY(-2px);box-shadow:0 6px 16px rgba(var(--shadow-rgb),.1)}
@@ -445,6 +452,30 @@ function hideLoading() {
   document.getElementById('loadingOverlay').style.display = 'none';
 }
 
+function showToast(msg) {
+  const isSuccess = /✅/.test(msg);
+  const isErr = !isSuccess && /שגיאה|❌|שגוי|לא נמצא|לא תקינ/.test(msg);
+  const color = isSuccess ? 'var(--green)' : isErr ? 'var(--danger)' : 'var(--accent)';
+  const existing = document.getElementById('appToast');
+  if (existing) { clearTimeout(existing._t); existing.remove(); }
+  const toast = document.createElement('div');
+  toast.id = 'appToast';
+  toast.style.cssText = `position:fixed;top:20px;right:50%;transform:translateX(50%) translateY(-8px);opacity:0;
+    background:var(--surface);border:1px solid var(--border);border-inline-start:4px solid ${color};
+    border-radius:10px;padding:12px 18px;max-width:min(90vw,420px);
+    box-shadow:0 8px 24px rgba(var(--shadow-rgb),.14),0 2px 6px rgba(var(--shadow-rgb),.08);
+    z-index:100000;font-size:.88rem;color:var(--text);font-family:inherit;
+    transition:opacity .2s,transform .2s;display:flex;align-items:center;gap:10px`;
+  toast.innerHTML = `<span style="flex:1;white-space:pre-line;line-height:1.4">${msg}</span>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;padding:0 2px;flex-shrink:0">✕</button>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(50%) translateY(0)'; });
+  toast._t = setTimeout(() => {
+    toast.style.opacity = '0'; toast.style.transform = 'translateX(50%) translateY(-8px)';
+    setTimeout(() => toast.remove(), 220);
+  }, 3800);
+}
+
 async function readBin() {
   const res = await fetch(FB_URL + '/agents.json');
   if (!res.ok) throw new Error('קריאה נכשלה (' + res.status + ')');
@@ -638,7 +669,7 @@ async function deleteUser(safeKey, phone) {
     addLog('מחיקת נציג', agent?.fullName || safeKey);
     renderUsersTab();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -663,7 +694,7 @@ function renderUsersTab() {
   const allowed = allowedActivities();
   const phoneMap = {};
   localAgents.filter(a => allowed.includes(a.activity)).forEach(a => {
-    if (a.phone) phoneMap[a.phone] = { ...a, _source: 'cloud' };
+    phoneMap[a.phone || a.key] = { ...a, _source: 'cloud' };
   });
   Object.entries(lsUsers).forEach(([phone, u]) => {
     if (!phoneMap[phone]) phoneMap[phone] = { ...u, key: `phone_${phone}`, fullName:`${u.firstName} ${u.lastName}`, submitted:false, approved:false, _source:'local' };
@@ -868,12 +899,12 @@ async function saveNewAgentByManager() {
   const mvtype   = document.getElementById('na-mvtype')?.value;
   const pin      = document.getElementById('na-pin')?.value.trim().replace(/[^0-9]/g,'') || '';
 
-  if (!fn || !ln)    { alert('יש להזין שם פרטי ושם משפחה'); return; }
-  if (!phone)        { alert('יש להזין מספר טלפון'); return; }
-  if (!activity)     { alert('יש לבחור מחלקה'); return; }
+  if (!fn || !ln)    { showToast('יש להזין שם פרטי ושם משפחה'); return; }
+  if (!phone)        { showToast('יש להזין מספר טלפון'); return; }
+  if (!activity)     { showToast('יש לבחור מחלקה'); return; }
 
-  if (localAgents.find(a => a.phone === phone)) { alert('נציג עם טלפון זה כבר קיים!'); return; }
-  if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) { alert(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`); return; }
+  if (localAgents.find(a => a.phone === phone)) { showToast('נציג עם טלפון זה כבר קיים!'); return; }
+  if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) { showToast(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`); return; }
 
   const key = `phone_${phone}`;
   const constraints = {};
@@ -901,7 +932,7 @@ async function saveNewAgentByManager() {
     document.getElementById('addAgentPanel').innerHTML = '';
     renderUsersTab();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -1012,7 +1043,7 @@ async function saveUserEdit(safeKey, phone) {
   const managerNotes= document.getElementById('eu-notes')?.value.trim() || '';
   const workDays    = DAYS.filter(day => document.getElementById('eu-day-'+day)?.checked);
 
-  if (!fn || !ln) { alert('יש להזין שם'); return; }
+  if (!fn || !ln) { showToast('יש להזין שם'); return; }
 
   const updates = { firstName:fn, lastName:ln, fullName:`${fn} ${ln}`, phone:newPhone||phone,
     email, movementType:mvtype, jobPct, empType, managerNotes, workDays, pin,
@@ -1025,7 +1056,7 @@ async function saveUserEdit(safeKey, phone) {
     Object.assign(agent, updates);
     if (newPhone && newPhone !== phone) agent.key = `phone_${newPhone}`;
     showLoading('שומר...');
-    try { await saveAgent(agent); } catch(e) { alert('שגיאה: ' + e.message); hideLoading(); return; }
+    try { await saveAgent(agent); } catch(e) { showToast('שגיאה: ' + e.message); hideLoading(); return; }
     hideLoading();
   }
 
@@ -1068,7 +1099,7 @@ async function executeUndo() {
   clearTimeout(undoTimeout);
   document.getElementById('undoBar').style.display = 'none';
   showLoading('מבטל...');
-  try { await undoAction(); } catch(e) { alert('שגיאה בביטול: ' + e.message); }
+  try { await undoAction(); } catch(e) { showToast('שגיאה בביטול: ' + e.message); }
   finally { hideLoading(); undoAction = null; }
 }
 
@@ -1344,7 +1375,7 @@ async function retryAgentLoad() {
   try {
     await renderAgentContent();
   } catch(e) {
-    alert('שגיאה: ' + e.message);
+    showToast('שגיאה: ' + e.message);
   } finally { hideLoading(); }
 }
 
@@ -1659,7 +1690,7 @@ async function agentConfirmAndSubmit() {
     await updateAgent(agent);
     agentDraft = {};
     await renderAgentContent();
-  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  } catch(e) { showToast('שגיאה בשמירה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -1710,7 +1741,7 @@ async function enterManager() {
         } catch(e) { /* silent */ }
       }
     });
-  } catch(e) { alert('שגיאה בחיבור לענן: ' + e.message); }
+  } catch(e) { showToast('שגיאה בחיבור לענן: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -1792,7 +1823,7 @@ async function sendWAMessage(phone, message) {
 async function sendReminderToAll() {
   // מצא נציגים שלא הגישו ויש להם טלפון
   const missing = localAgents.filter(a => !a.submitted && a.phone);
-  if (!missing.length) { alert('כל הנציגים עם טלפון כבר הגישו אילוצים!'); return; }
+  if (!missing.length) { showToast('כל הנציגים עם טלפון כבר הגישו אילוצים!'); return; }
 
   if (!confirm(`לשלוח תזכורת WhatsApp ל-${missing.length} נציגים שטרם הגישו?`)) return;
 
@@ -1806,8 +1837,8 @@ async function sendReminderToAll() {
       else { failed++; console.warn('נכשל עבור', agent.fullName, result.error); }
     }
     addLog('תזכורת WhatsApp', `נשלח ל-${sent}, נכשל ${failed}`);
-    alert(`✅ נשלח ל-${sent} נציגים${failed ? `\n❌ נכשל עבור ${failed}` : ''}`);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+    showToast(`✅ נשלח ל-${sent} נציגים${failed ? `\n❌ נכשל עבור ${failed}` : ''}`);
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2065,8 +2096,8 @@ async function saveSnapshotManually() {
   try {
     await saveWeeklySnapshot();
     await renderScheduleHistory();
-    alert('✅ הסידור נשמר בהיסטוריה!');
-  } catch(e) { alert('שגיאה: ' + e.message); }
+    showToast('✅ הסידור נשמר בהיסטוריה!');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2076,7 +2107,7 @@ async function saveSnapshotManually() {
 function checkAdminPass(action) {
   const pass = prompt(`פעולה זו דורשת סיסמת אדמין:\n"${action}"\n\nהזן סיסמת אדמין:`);
   if (pass === null) return false;
-  if (pass !== ADMIN_PASS) { alert('סיסמה שגויה!'); return false; }
+  if (pass !== ADMIN_PASS) { showToast('סיסמה שגויה!'); return false; }
   return true;
 }
 
@@ -2120,7 +2151,7 @@ async function importPinCsv(input) {
   input.value = '';
   let msg = `✅ עודכנו ${updated} נציגים עם PIN`;
   if (notFound.length) msg += `\n\n❌ לא נמצאו:\n${notFound.join('\n')}`;
-  alert(msg);
+  showToast(msg);
   renderUsersTab();
 }
 
@@ -2228,7 +2259,7 @@ async function saveManager(existingEmail) {
   const isAdmin    = document.getElementById('em-admin')?.checked || false;
   const activities = isAdmin ? ACTIVITIES : ACTIVITIES.filter(a => document.getElementById('em-act-'+a)?.checked);
 
-  if (!email) { alert('יש להזין מייל'); return; }
+  if (!email) { showToast('יש להזין מייל'); return; }
 
   const managers = await loadManagers();
   const existing = managers.find(m => m.email === (existingEmail||email));
@@ -2242,7 +2273,7 @@ async function saveManager(existingEmail) {
     updatedAt:  Date.now()
   };
 
-  if (!manager.password) { alert('יש להזין סיסמה'); return; }
+  if (!manager.password) { showToast('יש להזין סיסמה'); return; }
 
   const key = email.replace(/[.@]/g,'_');
   showLoading('שומר מנהל...');
@@ -2255,7 +2286,7 @@ async function saveManager(existingEmail) {
     document.getElementById('editManagerPanel').innerHTML = '';
     renderManagersTab();
     addLog('הוספת מנהל', name + ' — ' + email);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2267,7 +2298,7 @@ async function deleteManager(email) {
     await fetch(FB_URL + '/managers/' + key + '.json', {method:'DELETE'});
     renderManagersTab();
     addLog('מחיקת מנהל', email);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2299,7 +2330,7 @@ async function clearAllLogs() {
   try {
     await fetch(FB_URL + '/logs.json', {method:'DELETE'});
     renderLogs();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2389,7 +2420,7 @@ async function autoResetWeek() {
       renderMgSchedule();
       await renderMgAgents();
       updatePendingBadge();
-      alert('✅ הסידור אופס אוטומטית לשבוע חדש!');
+      showToast('✅ הסידור אופס אוטומטית לשבוע חדש!');
     }
   } catch(e) { console.error('שגיאה באיפוס אוטומטי:', e); }
   finally { hideLoading(); }
@@ -2419,7 +2450,7 @@ function saveScheduleSnapshot() {
 
 async function restoreSchedule() {
   const snaps = JSON.parse(localStorage.getItem('moked_snapshots') || '[]');
-  if (!snaps.length) { alert('אין סידור שמור לשחזור'); return; }
+  if (!snaps.length) { showToast('אין סידור שמור לשחזור'); return; }
   
   const last = snaps[snaps.length - 1];
   if (!confirm(`לשחזר את סידור "${last.actFilter||'כולן'}" מ-${last.time}?\n${last.agents.length} נציגים יושחזרו.`)) return;
@@ -2441,8 +2472,8 @@ async function restoreSchedule() {
     generateAndRender(true);
     await renderMgAgents();
     updatePendingBadge();
-    alert(`✅ הסידור שוחזר! ${last.agents.length} נציגים.`);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+    showToast(`✅ הסידור שוחזר! ${last.agents.length} נציגים.`);
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2457,7 +2488,7 @@ async function restoreFromHistory() {
   const weeks = [...weekSet].sort();
 
   if (!weeks.length) {
-    alert('לא נמצאה היסטוריית אילוצים.');
+    showToast('לא נמצאה היסטוריית אילוצים.');
     return;
   }
 
@@ -2468,7 +2499,7 @@ async function restoreFromHistory() {
 
   const idx = parseInt(choice) - 1;
   if (isNaN(idx) || idx < 0 || idx >= weeks.length) {
-    alert('בחירה לא תקינה');
+    showToast('בחירה לא תקינה');
     return;
   }
 
@@ -2478,7 +2509,7 @@ async function restoreFromHistory() {
   );
 
   if (!toRestore.length) {
-    alert(`לא נמצאו נציגים שהגישו לשבוע ${TARGET_WEEK}`);
+    showToast(`לא נמצאו נציגים שהגישו לשבוע ${TARGET_WEEK}`);
     return;
   }
 
@@ -2504,8 +2535,8 @@ async function restoreFromHistory() {
     await renderMgAgents();
     updatePendingBadge();
 
-    alert(`✅ שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}!`);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+    showToast(`✅ שוחזרו ${restored} נציגים לשבוע ${TARGET_WEEK}!`);
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -2924,15 +2955,15 @@ async function confirmQuickAssign(safeKey) {
     generateAndRender(true);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
 async function sendEmailsManually() {
-  if (!lastBuiltSched) { alert('יש ליצור סידור עבודה תחילה'); return; }
+  if (!lastBuiltSched) { showToast('יש ליצור סידור עבודה תחילה'); return; }
   const { sched, pool } = lastBuiltSched;
   const withEmail = pool.filter(a => a.email);
-  if (!withEmail.length) { alert('אין עובדים עם כתובת מייל'); return; }
+  if (!withEmail.length) { showToast('אין עובדים עם כתובת מייל'); return; }
   const btn = document.getElementById('sendEmailsBtn');
   if (btn) { btn.disabled = true; btn.textContent = `📤 שולח ל-${withEmail.length} עובדים...`; }
   try {
@@ -2941,7 +2972,7 @@ async function sendEmailsManually() {
     setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '📧 שלח סידור לעובדים במייל'; }}, 3000);
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '📧 שלח סידור לעובדים במייל'; }
-    alert('שגיאה בשליחה: ' + e.message);
+    showToast('שגיאה בשליחה: ' + e.message);
   }
 }
 
@@ -3136,7 +3167,7 @@ async function deleteAgentConstraint(key) {
       a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
       await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     });
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3251,7 +3282,7 @@ async function saveEditAgent(safeKey) {
     cancelEdit(safeKey);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  } catch(e) { showToast('שגיאה בשמירה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3267,7 +3298,7 @@ async function saveAndApproveAgent(safeKey) {
     cancelEdit(safeKey);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה בשמירה: ' + e.message); }
+  } catch(e) { showToast('שגיאה בשמירה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3276,7 +3307,7 @@ async function approveAllPending(activityFilter) {
     a.submitted && !a.approved &&
     (!activityFilter || a.activity === activityFilter)
   );
-  if (!toApprove.length) { alert('אין נציגים ממתינים לאישור'); return; }
+  if (!toApprove.length) { showToast('אין נציגים ממתינים לאישור'); return; }
   if (!confirm(`לאשר את כל ${toApprove.length} הנציגים הממתינים?`)) return;
   showLoading(`מאשר ${toApprove.length} נציגים...`);
   try {
@@ -3287,7 +3318,7 @@ async function approveAllPending(activityFilter) {
     addLog('אישור המוני', `אושרו ${toApprove.length} נציגים${activityFilter?' — '+activityFilter:''}`);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3301,7 +3332,7 @@ async function approveAgent(key) {
     addLog('אישור נציג', a.fullName);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3425,7 +3456,7 @@ async function revokeAgent(key) {
   try {
     const a = localAgents.find(x=>x.key===key);
     if (a) { a.approved = false; await saveAgent(a); await renderMgAgents(); updatePendingBadge(); }
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3444,7 +3475,7 @@ async function rejectAgent(key) {
       a.submitted = backup.submitted; a.approved = backup.approved; a.constraints = backup.constraints;
       await saveAgent(a); await renderMgAgents(); updatePendingBadge();
     });
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3515,11 +3546,11 @@ function openManualAgentPopup(activity) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
         <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם פרטי *</label>
-        <input id="mpop-first" placeholder="ישראל" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        <input id="mpop-first" class="inp" placeholder="ישראל" style="font-size:.88rem;padding:6px 10px"/>
       </div>
       <div>
         <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px">שם משפחה *</label>
-        <input id="mpop-last" placeholder="ישראלי" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.88rem;padding:6px 10px;width:100%;outline:none"/>
+        <input id="mpop-last" class="inp" placeholder="ישראלי" style="font-size:.88rem;padding:6px 10px"/>
       </div>
     </div>
     ${movementField}
@@ -3543,7 +3574,7 @@ function closeManualAgentPopup() {
 async function saveManualAgentFromPopup(activity) {
   const fn = document.getElementById('mpop-first')?.value.trim();
   const ln = document.getElementById('mpop-last')?.value.trim();
-  if (!fn || !ln) { alert('יש להזין שם פרטי ושם משפחה'); return; }
+  if (!fn || !ln) { showToast('יש להזין שם פרטי ושם משפחה'); return; }
 
   const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
   const isMovement = activity === 'מובמנט';
@@ -3571,7 +3602,7 @@ async function saveManualAgentFromPopup(activity) {
 
   // בדוק כפילות לפי שם
   if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) {
-    alert(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`);
+    showToast(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`);
     return;
   }
   const key   = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
@@ -3591,7 +3622,7 @@ async function saveManualAgentFromPopup(activity) {
       generateAndRender(true);
     }
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3661,7 +3692,7 @@ function openAddManualAgent(activity) {
 async function saveManualAgent(activity) {
   const fn = document.getElementById('man-first')?.value.trim();
   const ln = document.getElementById('man-last')?.value.trim();
-  if (!fn || !ln) { alert('יש להזין שם פרטי ושם משפחה'); return; }
+  if (!fn || !ln) { showToast('יש להזין שם פרטי ושם משפחה'); return; }
 
   const isSingle   = !!ACTIVITY_SHIFTS[activity]?.single;
   const isMovement = activity === 'מובמנט';
@@ -3717,13 +3748,13 @@ async function saveManualAgent(activity) {
     updatePendingBadge();
     // עדכן סידור אם פתוח
     if (lastGeneratedFilter === activity) generateAndRender(true);
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
 async function clearPendingConstraints(activity) {
   const count = localAgents.filter(a => a.activity === activity && a.submitted && !a.approved).length;
-  if (!count) { alert('אין אילוצים ממתינים לאישור בפעילות זו'); return; }
+  if (!count) { showToast('אין אילוצים ממתינים לאישור בפעילות זו'); return; }
   if (!confirm(`למחוק את כל ${count} האילוצים הממתינים של "${activity}"?\nהנציגים ישארו אבל יצטרכו לשלוח אילוצים מחדש.`)) return;
   showLoading('מוחק אילוצים...');
   try {
@@ -3737,13 +3768,13 @@ async function clearPendingConstraints(activity) {
     for (const a of localAgents.filter(x => x.activity === activity)) await saveAgent(a);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
 async function deleteAgentsForActivity(activity) {
   const count = localAgents.filter(a => a.activity === activity).length;
-  if (!count) { alert('אין נציגים בפעילות זו'); return; }
+  if (!count) { showToast('אין נציגים בפעילות זו'); return; }
   if (!confirm(`למחוק את כל ${count} הנציגים של "${activity}"?\nפעולה זו אינה הפיכה.`)) return;
   showLoading('מוחק...');
   try {
@@ -3752,7 +3783,7 @@ async function deleteAgentsForActivity(activity) {
     mgAgentsFilter = '';
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3771,7 +3802,7 @@ async function resetAllSubmissions() {
     renderMgSchedule();
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3956,7 +3987,7 @@ async function saveModalEdit(safeKey, andApprove) {
     generateAndRender(true);
     await renderMgAgents();
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -3982,7 +4013,7 @@ async function removeAgentFromSchedule(safeKey) {
       output.innerHTML = `<div class="empty"><div class="ico">😕</div><p>אין נציגים מאושרים</p></div>`;
     }
     updatePendingBadge();
-  } catch(e) { alert('שגיאה: ' + e.message); }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -4129,7 +4160,7 @@ function renderStats() {
 //  EXCEL EXPORT
 // ══════════════════════════════════════════════════════════
 function exportToExcel() {
-  if (!lastBuiltSched) { alert('יש ליצור סידור עבודה תחילה'); return; }
+  if (!lastBuiltSched) { showToast('יש ליצור סידור עבודה תחילה'); return; }
   const { sched, pool, actFilter } = lastBuiltSched;
   const title = actFilter || 'כל הפעילויות';
   const weekStr = WEEK_DATES['ראשון'].label + ' – ' + WEEK_DATES['שישי'].label;
