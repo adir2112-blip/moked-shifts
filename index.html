@@ -373,7 +373,51 @@ select.filter-sel:hover{border-color:var(--accent)}
 //  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════════
 const FB_URL   = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.app';
+const FB_API_KEY = 'AIzaSyB6O4qpkT-o0dVhCt0m2omp88GBhKRn_f4';
 const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
+
+// ══════════════════════════════════════════════════════════
+//  FIREBASE ANONYMOUS AUTH — כדי שכל בקשה למסד תהיה מאומתת
+// ══════════════════════════════════════════════════════════
+let FB_AUTH_TOKEN = null;
+
+function fbFetch(url, options) {
+  const sep = url.includes('?') ? '&' : '?';
+  const authedUrl = FB_AUTH_TOKEN ? url + sep + 'auth=' + FB_AUTH_TOKEN : url;
+  return fetch(authedUrl, options);
+}
+
+async function ensureFirebaseAuth() {
+  try {
+    const savedRefresh = localStorage.getItem('fb_refresh_token');
+    if (savedRefresh) {
+      const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_API_KEY}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: `grant_type=refresh_token&refresh_token=${savedRefresh}`
+      });
+      if (r.ok) {
+        const data = await r.json();
+        FB_AUTH_TOKEN = data.id_token;
+        localStorage.setItem('fb_refresh_token', data.refresh_token);
+        return;
+      }
+    }
+    // אין טוקן שמור, או שהרענון נכשל — צור משתמש אנונימי חדש
+    const r2 = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_API_KEY}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ returnSecureToken: true })
+    });
+    const data2 = await r2.json();
+    if (data2.idToken) {
+      FB_AUTH_TOKEN = data2.idToken;
+      localStorage.setItem('fb_refresh_token', data2.refreshToken);
+    }
+  } catch(e) { console.warn('Firebase auth failed', e); }
+}
+// רענון הטוקן כל 50 דקות (תוקף הטוקן הוא שעה)
+setInterval(ensureFirebaseAuth, 50 * 60 * 1000);
 
 // ══════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -381,8 +425,7 @@ const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
 const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות','הולנדיה'];
 const BUILTIN_ACTIVITIES = [...ACTIVITIES]; // מחלקות מובנות — לא ניתנות למחיקה
-const AGENT_PASS   = '12345';
-const ADMIN_PASS   = 'Adirgal123!';
+const ADMIN_PASS   = 'adirgal123';
 const COPTS = [
   {v:'none',  l:'רגיל',           e:'✅'},
   {v:'off',   l:'חופש',            e:'🏖'},
@@ -438,7 +481,7 @@ function registerCustomActivity(name) {
 }
 async function loadCustomActivities() {
   try {
-    const res = await fetch(FB_URL + '/customActivities.json');
+    const res = await fbFetch(FB_URL + '/customActivities.json');
     const list = await res.json();
     (list || []).forEach(name => registerCustomActivity(name));
   } catch(e) {}
@@ -451,10 +494,10 @@ async function addCustomActivity() {
   if (!checkAdminPass(`הוספת מחלקה "${name}"`)) return;
   showLoading('מוסיף מחלקה...');
   try {
-    const res = await fetch(FB_URL + '/customActivities.json');
+    const res = await fbFetch(FB_URL + '/customActivities.json');
     const list = (await res.json()) || [];
     list.push(name);
-    await fetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
+    await fbFetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
     registerCustomActivity(name);
     if (inp) inp.value = '';
     buildDeptButtons();
@@ -472,13 +515,13 @@ async function deleteCustomActivity(name) {
   showLoading('מוחק מחלקה...');
   try {
     for (const a of toDelete) {
-      await fetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
+      await fbFetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
     }
     localAgents = localAgents.filter(a => a.activity !== name);
-    const res = await fetch(FB_URL + '/customActivities.json');
+    const res = await fbFetch(FB_URL + '/customActivities.json');
     let list = (await res.json()) || [];
     list = list.filter(n => n !== name);
-    await fetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
+    await fbFetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
     const idx = ACTIVITIES.indexOf(name);
     if (idx > -1) ACTIVITIES.splice(idx, 1);
     delete ACTIVITY_COLORS[name];
@@ -557,7 +600,7 @@ function showToast(msg) {
 }
 
 async function readBin() {
-  const res = await fetch(FB_URL + '/agents.json');
+  const res = await fbFetch(FB_URL + '/agents.json');
   if (!res.ok) throw new Error('קריאה נכשלה (' + res.status + ')');
   const data = await res.json();
   if (!data) return [];
@@ -574,7 +617,7 @@ function fbKey(key) {
 async function writeBin(agents) {
   const obj = {};
   agents.forEach(a => { obj[fbKey(a.key)] = a; });
-  const res = await fetch(FB_URL + '/agents.json', {
+  const res = await fbFetch(FB_URL + '/agents.json', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(obj)
@@ -585,7 +628,7 @@ async function writeBin(agents) {
 
 async function updateAgentInDB(agent) {
   const key = fbKey(agent.key);
-  const res = await fetch(FB_URL + '/agents/' + key + '.json', {
+  const res = await fbFetch(FB_URL + '/agents/' + key + '.json', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(agent)
@@ -738,7 +781,7 @@ async function deleteUser(safeKey, phone) {
   try {
     // מחק מ-Firebase ישירות
     if (agent) {
-      await fetch(FB_URL + '/agents/' + safeKey + '.json', {method:'DELETE'});
+      await fbFetch(FB_URL + '/agents/' + safeKey + '.json', {method:'DELETE'});
       localAgents = localAgents.filter(a => fbKey(a.key) !== safeKey);
     }
     // מחק מ-localStorage
@@ -1994,7 +2037,7 @@ async function saveWeeklySnapshot() {
       };
     });
 
-    await fetch(FB_URL + '/scheduleHistory/' + snapKey + '.json', {
+    await fbFetch(FB_URL + '/scheduleHistory/' + snapKey + '.json', {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(snapshot)
@@ -2010,7 +2053,7 @@ async function renderScheduleHistory() {
 
   let allSnaps = {};
   try {
-    const res  = await fetch(FB_URL + '/scheduleHistory.json');
+    const res  = await fbFetch(FB_URL + '/scheduleHistory.json');
     allSnaps   = await res.json() || {};
   } catch(e) { pane.innerHTML = `<div class="empty"><p>שגיאה בטעינה</p></div>`; return; }
 
@@ -2240,7 +2283,7 @@ async function importPinCsv(input) {
 // ══════════════════════════════════════════════════════════
 async function loadManagers() {
   try {
-    const res = await fetch(FB_URL + '/managers.json');
+    const res = await fbFetch(FB_URL + '/managers.json');
     const data = await res.json();
     return data ? Object.values(data).filter(Boolean) : [];
   } catch(e) { return []; }
@@ -2383,7 +2426,7 @@ async function saveManager(existingEmail) {
   const key = email.replace(/[.@]/g,'_');
   showLoading('שומר מנהל...');
   try {
-    await fetch(FB_URL + '/managers/' + key + '.json', {
+    await fbFetch(FB_URL + '/managers/' + key + '.json', {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(manager)
@@ -2400,7 +2443,7 @@ async function deleteManager(email) {
   const key = email.replace(/[.@]/g,'_');
   showLoading('מוחק...');
   try {
-    await fetch(FB_URL + '/managers/' + key + '.json', {method:'DELETE'});
+    await fbFetch(FB_URL + '/managers/' + key + '.json', {method:'DELETE'});
     renderManagersTab();
     addLog('מחיקת מנהל', email);
   } catch(e) { showToast('שגיאה: ' + e.message); }
@@ -2421,7 +2464,7 @@ function addLog(action, details) {
     };
     // שמור ב-Firebase תחת /logs
     const key = 'log_' + log.ts;
-    fetch(FB_URL + '/logs/' + key + '.json', {
+    fbFetch(FB_URL + '/logs/' + key + '.json', {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(log)
@@ -2433,7 +2476,7 @@ async function clearAllLogs() {
   if (!checkAdminPass('מחיקת כל הלוגים')) return;
   showLoading('מוחק לוגים...');
   try {
-    await fetch(FB_URL + '/logs.json', {method:'DELETE'});
+    await fbFetch(FB_URL + '/logs.json', {method:'DELETE'});
     renderLogs();
   } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
@@ -2444,7 +2487,7 @@ async function renderLogs() {
   pane.innerHTML = `<div class="empty"><div class="spinner"></div><p>טוען לוגים...</p></div>`;
   let logs = [];
   try {
-    const res = await fetch(FB_URL + '/logs.json');
+    const res = await fbFetch(FB_URL + '/logs.json');
     const data = await res.json();
     if (data) logs = Object.values(data).filter(Boolean).sort((a,b) => (b.ts||0)-(a.ts||0));
   } catch(e){}
@@ -3884,7 +3927,7 @@ async function deleteAgentsForActivity(activity) {
   showLoading('מוחק...');
   try {
     for (const a of toDelete) {
-      await fetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
+      await fbFetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
     }
     localAgents = localAgents.filter(a => a.activity !== activity);
     mgAgentsFilter = '';
@@ -4315,6 +4358,7 @@ function shuffleArray(arr) {
 (function(){ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; document.head.appendChild(s); })();
 
 (async () => {
+  try { await ensureFirebaseAuth(); } catch(e) {}
   try { await loadAgents(); } catch(e) {}
   try { await loadCustomActivities(); } catch(e) {}
   buildDeptButtons();
