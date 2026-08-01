@@ -380,6 +380,7 @@ const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
 // ══════════════════════════════════════════════════════════
 const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const ACTIVITIES = ['מובמנט','מאוחדת','פריפיט שירות','פריפיט מכירות','מחלקת סחר','מעוף לעמית מכירות','הולנדיה'];
+const BUILTIN_ACTIVITIES = [...ACTIVITIES]; // מחלקות מובנות — לא ניתנות למחיקה
 const AGENT_PASS   = '12345';
 const ADMIN_PASS   = 'Adirgal123!';
 const COPTS = [
@@ -413,6 +414,85 @@ const ACTIVITY_COLORS = {
   'הולנדיה':            { bg:'rgba(20,200,200,.15)',   border:'rgba(20,200,200,.4)', text:'#0e7a7a',  hex:'#14c8c8' },
 };
 function actColor(activity) { return ACTIVITY_COLORS[activity] || { bg:'rgba(139,148,158,.15)', border:'rgba(139,148,158,.3)', text:'var(--muted)', hex:'#8b949e' }; }
+
+// ══════════════════════════════════════════════════════════
+//  CUSTOM ACTIVITIES (מחלקות שנוספו ע"י אדמין)
+// ══════════════════════════════════════════════════════════
+const CUSTOM_ACT_PALETTE = [
+  { rgb:'190,60,150',  text:'#8a2d70' },
+  { rgb:'20,140,160',  text:'#0d6e7d' },
+  { rgb:'180,130,20',  text:'#8a6410' },
+  { rgb:'90,150,60',   text:'#3f6b1f' },
+  { rgb:'140,90,190',  text:'#6b3fa8' },
+  { rgb:'190,90,60',   text:'#8a3d24' },
+];
+function registerCustomActivity(name) {
+  if (!ACTIVITIES.includes(name)) ACTIVITIES.push(name);
+  if (!ACTIVITY_SHIFTS[name]) ACTIVITY_SHIFTS[name] = { single: '09:00–17:00' };
+  if (!ACTIVITY_COLORS[name]) {
+    let hash = 0;
+    for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    const p = CUSTOM_ACT_PALETTE[hash % CUSTOM_ACT_PALETTE.length];
+    ACTIVITY_COLORS[name] = { bg:`rgba(${p.rgb},.15)`, border:`rgba(${p.rgb},.4)`, text:p.text, hex:p.text };
+  }
+}
+async function loadCustomActivities() {
+  try {
+    const res = await fetch(FB_URL + '/customActivities.json');
+    const list = await res.json();
+    (list || []).forEach(name => registerCustomActivity(name));
+  } catch(e) {}
+}
+async function addCustomActivity() {
+  const inp = document.getElementById('newActName');
+  const name = (inp?.value || '').trim();
+  if (!name) { showToast('יש להזין שם מחלקה'); return; }
+  if (ACTIVITIES.includes(name)) { showToast('מחלקה בשם זה כבר קיימת'); return; }
+  if (!checkAdminPass(`הוספת מחלקה "${name}"`)) return;
+  showLoading('מוסיף מחלקה...');
+  try {
+    const res = await fetch(FB_URL + '/customActivities.json');
+    const list = (await res.json()) || [];
+    list.push(name);
+    await fetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
+    registerCustomActivity(name);
+    if (inp) inp.value = '';
+    buildDeptButtons();
+    addLog('הוספת מחלקה', name);
+    showToast(`✅ מחלקה "${name}" נוספה`);
+    await renderManagersTab();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+async function deleteCustomActivity(name) {
+  if (BUILTIN_ACTIVITIES.includes(name)) { showToast('לא ניתן למחוק מחלקה מובנית'); return; }
+  const toDelete = localAgents.filter(a => a.activity === name);
+  if (!confirm(`למחוק את המחלקה "${name}"?\n${toDelete.length ? `כל ${toDelete.length} הנציגים שבה יימחקו לצמיתות!` : 'אין נציגים במחלקה זו.'}\nפעולה זו אינה הפיכה.`)) return;
+  if (!checkAdminPass(`מחיקת מחלקה "${name}"`)) return;
+  showLoading('מוחק מחלקה...');
+  try {
+    for (const a of toDelete) {
+      await fetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
+    }
+    localAgents = localAgents.filter(a => a.activity !== name);
+    const res = await fetch(FB_URL + '/customActivities.json');
+    let list = (await res.json()) || [];
+    list = list.filter(n => n !== name);
+    await fetch(FB_URL + '/customActivities.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(list) });
+    const idx = ACTIVITIES.indexOf(name);
+    if (idx > -1) ACTIVITIES.splice(idx, 1);
+    delete ACTIVITY_COLORS[name];
+    delete ACTIVITY_SHIFTS[name];
+    buildDeptButtons();
+    updatePendingBadge();
+    addLog('מחיקת מחלקה', `${name} (${toDelete.length} נציגים)`);
+    showToast(`🗑 מחלקה "${name}" ו-${toDelete.length} נציגיה נמחקו`);
+    await renderManagersTab();
+    await renderMgAgents().catch(()=>{});
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 function getInitials(name) {
   if (!name) return '';
   const parts = name.trim().split(/\s+/);
@@ -2203,7 +2283,32 @@ async function renderManagersTab() {
         </table>
       </div>
     </div>
-    <div id="editManagerPanel"></div>`;
+    <div id="editManagerPanel"></div>
+    ${renderDeptManagementCard()}`;
+}
+
+function renderDeptManagementCard() {
+  const chips = ACTIVITIES.map(a => {
+    const isBuiltIn = BUILTIN_ACTIVITIES.includes(a);
+    const count = localAgents.filter(x => x.activity === a).length;
+    const ac = actColor(a);
+    return `<span style="display:inline-flex;align-items:center;gap:8px;background:${ac.bg};border:1px solid ${ac.border};border-radius:20px;padding:6px 8px 6px 14px;font-size:.83rem;color:${ac.text};font-weight:600">
+      <span>${a} <span style="opacity:.7;font-weight:400;font-size:.72rem">(${count})</span></span>
+      ${isBuiltIn
+        ? `<span style="font-size:.66rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-weight:600">מובנה</span>`
+        : `<button onclick="deleteCustomActivity('${a.replace(/'/g,"\\'")}')" title="מחק מחלקה" style="background:var(--surface);border:1px solid ${ac.border};color:var(--danger);cursor:pointer;font-size:.78rem;padding:2px 6px;border-radius:6px;line-height:1.4">🗑</button>`}
+    </span>`;
+  }).join('');
+
+  return `<div class="card" style="margin-top:16px">
+    <div class="card-title">🏷️ ניהול מחלקות</div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">הוספה/מחיקה של מחלקות פעילות — פעולה מוגנת בסיסמת אדמין. <strong style="color:var(--text)">מחיקת מחלקה מוחקת לצמיתות גם את כל הנציגים ששייכים אליה.</strong> 7 המחלקות המובנות (מסומנות "מובנה") אינן ניתנות למחיקה.</p>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <input id="newActName" class="inp" placeholder="שם מחלקה חדשה..." style="max-width:280px;font-size:.88rem;padding:8px 12px" onkeydown="if(event.key==='Enter')addCustomActivity()"/>
+      <button class="btn btn-primary btn-sm" onclick="addCustomActivity()">➕ הוסף מחלקה</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${chips}</div>
+  </div>`;
 }
 
 function openAddManager() { openEditManager(null); }
@@ -3773,16 +3878,19 @@ async function clearPendingConstraints(activity) {
 }
 
 async function deleteAgentsForActivity(activity) {
-  const count = localAgents.filter(a => a.activity === activity).length;
-  if (!count) { showToast('אין נציגים בפעילות זו'); return; }
-  if (!confirm(`למחוק את כל ${count} הנציגים של "${activity}"?\nפעולה זו אינה הפיכה.`)) return;
+  const toDelete = localAgents.filter(a => a.activity === activity);
+  if (!toDelete.length) { showToast('אין נציגים בפעילות זו'); return; }
+  if (!confirm(`למחוק את כל ${toDelete.length} הנציגים של "${activity}"?\nפעולה זו אינה הפיכה.`)) return;
   showLoading('מוחק...');
   try {
+    for (const a of toDelete) {
+      await fetch(FB_URL + '/agents/' + fbKey(a.key) + '.json', { method:'DELETE' });
+    }
     localAgents = localAgents.filter(a => a.activity !== activity);
-    await saveAgents(localAgents);
     mgAgentsFilter = '';
     await renderMgAgents();
     updatePendingBadge();
+    showToast(`🗑 ${toDelete.length} נציגים נמחקו`);
   } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
@@ -4208,6 +4316,7 @@ function shuffleArray(arr) {
 
 (async () => {
   try { await loadAgents(); } catch(e) {}
+  try { await loadCustomActivities(); } catch(e) {}
   buildDeptButtons();
   setRole('agent');
 })();
