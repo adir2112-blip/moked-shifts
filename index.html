@@ -1852,7 +1852,7 @@ async function enterManager() {
     updatePendingBadge();
     scheduleAutoReset();
     scheduleWeeklySave();
-    scheduleWAReminder();
+    // scheduleWAReminder(); // מנוטרל — כפל שליחה עם הבוט החיצוני (10:00/12:00), וגם היה מצטבר בכל login
     startAutoRefresh(async () => {
       if (!currentlyEditingKey) {
         try {
