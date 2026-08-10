@@ -2025,9 +2025,10 @@ async function checkAndSendWAReminders() {
       if (!m || !m.enabled) continue;
       const targetMinutes = (m.hour || 0) * 60 + (m.minute || 0);
       const isRightDay = now.getDay() === Number(m.day);
-      const isPastTime = nowMinutes >= targetMinutes;
+      // חלון "תפיסה מאוחרת" מוגבל ל-30 דקות אחרי השעה שנקבעה — לא "כל היום"
+      const isWithinWindow = nowMinutes >= targetMinutes && nowMinutes <= targetMinutes + 30;
       const alreadySentToday = m.lastSentDate === todayKey;
-      if (isRightDay && isPastTime && !alreadySentToday) {
+      if (isRightDay && isWithinWindow && !alreadySentToday) {
         await sendWAReminderBatch(slot, m.text || WA_REMINDER_DEFAULT_TEXT_1);
         await saveWAReminderSlot(slot, { ...m, lastSentDate: todayKey });
       }
