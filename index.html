@@ -2648,22 +2648,37 @@ async function renderLogs() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  AUTO RESET — כל יום ראשון בשעה 18:00
+//  AUTO RESET — מיועד לכל יום ראשון בשעה 18:00, עם "תפיסה מאוחרת"
+//  אם אף מנהל לא היה מחובר בול בשעה הזו. המעקב "מתי אופס לאחרונה"
+//  נשמר ב-Firebase (לא ב-localStorage!) כדי שכל מנהל/דפדפן יוכל
+//  "לתפוס" את האיפוס שפוספס, ולא רק זה שהיה פתוח באותו רגע.
 // ══════════════════════════════════════════════════════════
-function scheduleAutoReset() {
-  const check = () => {
-    const now = new Date();
-    // יום ראשון = 0 בישראל
-    if (now.getDay() === 0 && now.getHours() === 18 && now.getMinutes() === 0) {
-      const lastReset = localStorage.getItem('moked_last_auto_reset');
-      const todayKey  = now.toLocaleDateString('he-IL');
-      if (lastReset !== todayKey) {
-        localStorage.setItem('moked_last_auto_reset', todayKey);
-        autoResetWeek();
-      }
+function mostRecentSunday18(now) {
+  const candidate = new Date(now);
+  candidate.setDate(candidate.getDate() - candidate.getDay()); // חזרה ליום ראשון של השבוע הנוכחי
+  candidate.setHours(18, 0, 0, 0);
+  if (candidate.getTime() > now.getTime()) candidate.setDate(candidate.getDate() - 7); // עוד לא הגענו לשם — קח את יום ראשון הקודם
+  return candidate.getTime();
+}
+
+async function checkAutoReset() {
+  try {
+    const res = await fbFetch(FB_URL + '/lastAutoReset.json');
+    const lastTs = (await res.json()) || 0;
+    const threshold = mostRecentSunday18(new Date());
+    if (lastTs < threshold) {
+      await fbFetch(FB_URL + '/lastAutoReset.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Date.now()) });
+      await autoResetWeek();
     }
-  };
-  setInterval(check, 30000);
+  } catch(e) { console.warn('בדיקת איפוס אוטומטי נכשלה', e); }
+}
+
+let _autoResetSchedulerActive = false;
+function scheduleAutoReset() {
+  if (_autoResetSchedulerActive) return; // מונע רישום כפול אם enterManager נקרא כמה פעמים
+  _autoResetSchedulerActive = true;
+  checkAutoReset();
+  setInterval(checkAutoReset, 60000);
 }
 
 async function autoResetWeek() {
