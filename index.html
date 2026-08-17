@@ -2920,6 +2920,8 @@ function buildSchedule(agentList) {
     const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
     if (!isSingle) {
       DAYS.forEach(day => {
+        const isWorkDay = !agent.workDays || !agent.workDays.length || agent.workDays.includes(day);
+        if (!isWorkDay) return; // לא יום עבודה של הנציג — לא לשבץ אוטומטית
         const c = agent.constraints[day]||{type:'none',time:''};
         const ms = agent.managerShift?.[day] || '';
         if (c.type === 'none' && !ms) {
@@ -2939,6 +2941,7 @@ function buildSchedule(agentList) {
   DAYS.forEach(day => {
     const shift8=[], shift9=[], digital8=[], digital9=[], dayOff=[];
     agentList.forEach(agent => {
+      const isWorkDay = !agent.workDays || !agent.workDays.length || agent.workDays.includes(day);
       const c = agent.constraints[day]||{type:'none',time:''};
       const ms = agent.managerShift?.[day] || '';
       // קבע דיגיטל לפי managerShift הספציפי ליום (אם הוגדר), אחרת לפי movementType הגלובלי
@@ -2949,7 +2952,9 @@ function buildSchedule(agentList) {
       const isSingle  = ACTIVITY_SHIFTS[agent.activity]?.single;
       const entry = {name:agent.fullName, activity:agent.activity, movementType:agent.movementType||null, time:c.time, constraintType:c.type, note:c.note||''};
 
-      if (c.type === 'off') {
+      if (!isWorkDay) {
+        dayOff.push({...entry, constraintType:'off', note:'לא יום עבודה קבוע'});
+      } else if (c.type === 'off') {
         dayOff.push(entry);
       } else if (c.type === 'split') {
         // פיצול משמרת — שים בשיחות/דיגיטל לפי סוג
