@@ -1178,11 +1178,10 @@ async function saveUserEdit(safeKey, phone) {
     allowedActivity: activity || '',
     activity: activity || (localAgents.find(a=>a.key.replace(/[\s']/g,'_')===safeKey)?.activity || '') };
 
-  // עדכן ב-localAgents (ענן)
+  // עדכן ב-localAgents (ענן) — לעולם לא לשנות את agent.key הקיים (זה יוצר רשומה כפולה חדשה!)
   const agent = localAgents.find(a => fbKey(a.key) === safeKey);
   if (agent) {
     Object.assign(agent, updates);
-    if (newPhone && newPhone !== phone) agent.key = `phone_${newPhone}`;
     showLoading('שומר...');
     try { await saveAgent(agent); } catch(e) { showToast('שגיאה: ' + e.message); hideLoading(); return; }
     hideLoading();
