@@ -1805,6 +1805,7 @@ async function agentConfirmAndSubmit() {
     });
     agent.submitted = true;
     agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    agent.submittedAtTs = Date.now();
     // שמור movementType מהכניסה הנוכחית
     if (currentUser?.movementType) agent.movementType = currentUser.movementType;
     // שמור היסטוריית אילוץ
@@ -2674,7 +2675,7 @@ async function checkAutoReset() {
     const threshold = mostRecentSunday18(new Date());
     if (lastTs < threshold) {
       await fbFetch(FB_URL + '/lastAutoReset.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Date.now()) });
-      await autoResetWeek();
+      await autoResetWeek(threshold);
     }
   } catch(e) { console.warn('בדיקת איפוס אוטומטי נכשלה', e); }
 }
@@ -2687,18 +2688,23 @@ function scheduleAutoReset() {
   setInterval(checkAutoReset, 60000);
 }
 
-async function autoResetWeek() {
+async function autoResetWeek(threshold) {
   try {
     showLoading('מאפס שבוע חדש...');
+    let resetCount = 0, skippedCount = 0;
     for (const a of localAgents) {
+      // אם הנציג כבר הגיש אילוץ *אחרי* נקודת האיפוס (יום ראשון 18:00) —
+      // זו הגשה טרייה לשבוע החדש, ואסור למחוק אותה גם אם האיפוס מגיע באיחור
+      if (threshold && a.submittedAtTs && a.submittedAtTs >= threshold) { skippedCount++; continue; }
       a.submitted = false; a.approved = false;
       DAYS.forEach(d => a.constraints[d] = {type:'none', time:'', note:''});
       if (a.managerShift) DAYS.forEach(d => a.managerShift[d] = '');
       await saveAgent(a);
+      resetCount++;
     }
     lastGeneratedFilter = null;
     lastBuiltSched = null;
-    addLog('אפס שבוע', 'איפוס אוטומטי — יום ראשון 18:00');
+    addLog('אפס שבוע', `איפוס אוטומטי — אופסו ${resetCount}, נשמרו ${skippedCount} (כבר הגישו לשבוע החדש)`);
     if (currentRole === 'manager') {
       renderMgSchedule();
       await renderMgAgents();
@@ -3566,6 +3572,7 @@ async function saveEditAgent(safeKey) {
     agent.constraints = collectEditedConstraints(safeKey);
     agent.submitted = true;
     if (!agent.submittedAt) agent.submittedAt = new Date().toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    if (!agent.submittedAtTs) agent.submittedAtTs = Date.now();
     await saveAgent(agent);
     cancelEdit(safeKey);
     await renderMgAgents();
