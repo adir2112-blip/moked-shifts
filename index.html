@@ -2586,22 +2586,52 @@ async function renderLogs() {
 //  אם אף מנהל לא היה מחובר בול בשעה הזו. המעקב "מתי אופס לאחרונה"
 //  נשמר ב-Firebase (לא ב-localStorage!) כדי שכל מנהל/דפדפן יוכל
 //  "לתפוס" את האיפוס שפוספס, ולא רק זה שהיה פתוח באותו רגע.
+//
+//  השעה נלקחת משרת Firebase ו"יום ראשון 18:00" מחושב לפי שעון ישראל —
+//  לא לפי השעון/אזור הזמן של המחשב. מחשב עם אזור זמן שגוי (UTC+2 במקום
+//  ישראל) חישב "18:00" כ-19:00 אמיתי, ראה שהאיפוס של 18:00 "מוקדם מדי"
+//  ואיפס שוב באמצע השבוע ומחק אילוצים שכבר הוגשו (10.10, 15.10 ועוד).
 // ══════════════════════════════════════════════════════════
-function mostRecentSunday18(now) {
-  const candidate = new Date(now);
-  candidate.setDate(candidate.getDate() - candidate.getDay()); // חזרה ליום ראשון של השבוע הנוכחי
-  candidate.setHours(18, 0, 0, 0);
-  if (candidate.getTime() > now.getTime()) candidate.setDate(candidate.getDate() - 7); // עוד לא הגענו לשם — קח את יום ראשון הקודם
-  return candidate.getTime();
+async function getServerNow() {
+  const res = await fbFetch(FB_URL + '/serverTime.json', {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({'.sv':'timestamp'})
+  });
+  const ts = Number(await res.json());
+  if (!res.ok || !ts) throw new Error('קריאת שעת שרת נכשלה (' + res.status + ')');
+  return ts;
+}
+
+function israelParts(ts) {
+  const p = {};
+  new Intl.DateTimeFormat('en-US', {
+    timeZone:'Asia/Jerusalem', year:'numeric', month:'numeric', day:'numeric',
+    hour:'numeric', minute:'numeric', second:'numeric', weekday:'short', hourCycle:'h23'
+  }).formatToParts(new Date(ts)).forEach(x => p[x.type] = x.value);
+  return { y:+p.year, m:+p.month, d:+p.day, h:+p.hour, mi:+p.minute, s:+p.second,
+           dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday) };
+}
+
+// התאריך (y/m/d, יכול לגלוש — Date.UTC מנרמל) בשעה hour:00 שעון ישראל, כ-timestamp
+function israelTimeToTs(y, m, d, hour) {
+  const guess = Date.UTC(y, m - 1, d, hour);
+  const p = israelParts(guess);
+  const offset = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s) - guess;
+  return guess - offset;
+}
+
+function mostRecentSunday18(nowTs) {
+  const p = israelParts(nowTs);
+  const t = israelTimeToTs(p.y, p.m, p.d - p.dow, 18); // יום ראשון של השבוע הנוכחי
+  return t > nowTs ? israelTimeToTs(p.y, p.m, p.d - p.dow - 7, 18) : t; // עוד לא הגענו לשם — קח את יום ראשון הקודם
 }
 
 async function checkAutoReset() {
   try {
     const res = await fbFetch(FB_URL + '/lastAutoReset.json');
     const lastTs = (await res.json()) || 0;
-    const threshold = mostRecentSunday18(new Date());
+    const threshold = mostRecentSunday18(await getServerNow());
     if (lastTs < threshold) {
-      await fbFetch(FB_URL + '/lastAutoReset.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Date.now()) });
+      await fbFetch(FB_URL + '/lastAutoReset.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({'.sv':'timestamp'}) });
       await autoResetWeek(threshold);
     }
   } catch(e) { console.warn('בדיקת איפוס אוטומטי נכשלה', e); }
