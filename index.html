@@ -374,7 +374,7 @@ select.filter-sel:hover{border-color:var(--accent)}
 // ══════════════════════════════════════════════════════════
 const FB_URL   = 'https://moked-shifts-default-rtdb.europe-west1.firebasedatabase.app';
 const FB_API_KEY = 'AIzaSyB6O4qpkT-o0dVhCt0m2omp88GBhKRn_f4';
-const WA_API   = 'https://whatsapp-bot-production-120a.up.railway.app/api/send';
+const WA_REMIND_API = 'https://whatsapp-bot-production-120a.up.railway.app/api/moked/remind-missing';
 
 // ══════════════════════════════════════════════════════════
 //  FIREBASE ANONYMOUS AUTH — כדי שכל בקשה למסד תהיה מאומתת
@@ -1859,7 +1859,6 @@ async function enterManager() {
     updatePendingBadge();
     scheduleAutoReset();
     scheduleWeeklySave();
-    scheduleWAReminder();
     startAutoRefresh(async () => {
       if (!currentlyEditingKey) {
         try {
@@ -1926,56 +1925,33 @@ function mgTab(pane, btn) {
 // ══════════════════════════════════════════════════════════
 //  WHATSAPP REMINDERS
 // ══════════════════════════════════════════════════════════
-function formatPhoneForWA(phone) {
-  if (!phone) return null;
-  const clean = phone.replace(/[^0-9]/g, '');
-  if (clean.startsWith('972')) return clean;
-  if (clean.startsWith('0'))   return '972' + clean.slice(1);
-  return '972' + clean;
-}
-
-async function sendWAMessage(phone, message) {
-  const formatted = formatPhoneForWA(phone);
-  if (!formatted) return { ok: false, error: 'אין טלפון' };
-  try {
-    const res = await fetch(WA_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: formatted, message })
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, data };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
-}
-
 async function sendReminderToAll() {
-  // מצא נציגים שלא הגישו ויש להם טלפון
+  // שרת הבוט בוחר בעצמו את הנמענים (מי שטרם הגיש) ואת הנוסח (הודעה 1) —
+  // האתר ציבורי ולא יכול להחזיק את הסוד של /api/send
   const missing = localAgents.filter(a => !a.submitted && a.phone);
   if (!missing.length) { showToast('כל הנציגים עם טלפון כבר הגישו אילוצים!'); return; }
 
   if (!confirm(`לשלוח תזכורת WhatsApp ל-${missing.length} נציגים שטרם הגישו?`)) return;
 
   showLoading(`שולח תזכורות ל-${missing.length} נציגים...`);
-  let sent = 0, failed = 0;
   try {
-    for (const agent of missing) {
-      const msg = `שלום ${agent.firstName}! 👋\n\nתזכורת: טרם שלחת אילוצים לשבוע הבא.\nאנא היכנס למערכת וסיים את ההגשה:\nhttps://adir2112-blip.github.io/moked-shifts\n\nתודה 🙏`;
-      const result = await sendWAMessage(agent.phone, msg);
-      if (result.ok) sent++;
-      else { failed++; console.warn('נכשל עבור', agent.fullName, result.error); }
-    }
-    addLog('תזכורת WhatsApp', `נשלח ל-${sent}, נכשל ${failed}`);
-    showToast(`✅ נשלח ל-${sent} נציגים${failed ? `\n❌ נכשל עבור ${failed}` : ''}`);
+    const res = await fetch(WA_REMIND_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestedBy: currentUser?.fullName || '' })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || ('שגיאת שרת ' + res.status));
+    showToast(`✅ התזכורת נכנסה לתור השליחה עבור ${data.count} נציגים`);
   } catch(e) { showToast('שגיאה: ' + e.message); }
   finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════════════════════
 //  תזכורות WhatsApp אוטומטיות — ניתנות להגדרה מלאה (יום/שעה/נוסח)
-//  לכל הודעה נשמר lastSentDate ב-Firebase (לא ב-localStorage!) כדי
-//  שהמנגנון לא ישלח כפול גם אם כמה מנהלים/דפדפנים פתוחים במקביל.
+//  כאן רק עורכים את ההגדרות ב-/waReminderConfig. השליחה עצמה רצה בשרת
+//  הבוט (whatsapp-bot, src/mokedReminders.js), כך שהיא לא תלויה במנהל
+//  מחובר ולא נשלחת כפול כשכמה מנהלים מחוברים במקביל.
 // ══════════════════════════════════════════════════════════
 const WA_REMINDER_DEFAULT_TEXT_1 = 'שלום {שם}! 👋\n\nתזכורת: טרם שלחת אילוצים לשבוע הבא.\nאנא היכנס למערכת וסיים את ההגשה:\nhttps://adir2112-blip.github.io/moked-shifts\n\nתודה 🙏';
 const WA_REMINDER_DEFAULT_TEXT_2 = 'שלום {שם}! ⚠️\n\nזוהי תזכורת אחרונה — עדיין לא שלחת אילוצים לשבוע הבא, ויש להשלים זאת בהקדם.\nהיכנס עכשיו למערכת:\nhttps://adir2112-blip.github.io/moked-shifts\n\nתודה על שיתוף הפעולה 🙏';
@@ -1997,58 +1973,11 @@ async function loadWAReminderConfig() {
 }
 
 async function saveWAReminderSlot(slot, data) {
-  await fbFetch(FB_URL + `/waReminderConfig/${slot}.json`, {
-    method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
+  // PATCH ולא PUT — lastSentDate מתעדכן ע"י שרת הבוט, ושמירה מהמסך לא דורסת אותו
+  const res = await fbFetch(FB_URL + `/waReminderConfig/${slot}.json`, {
+    method: 'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
   });
-}
-
-let _waSending = {};
-async function sendWAReminderBatch(slot, template) {
-  if (_waSending[slot]) return;
-  _waSending[slot] = true;
-  try {
-    await loadAgents();
-    const missing = localAgents.filter(a => !a.submitted && a.phone);
-    let sent = 0, failed = 0;
-    for (const agent of missing) {
-      const msg = template.replace(/\{שם\}/g, agent.firstName || '');
-      const result = await sendWAMessage(agent.phone, msg);
-      if (result.ok) sent++; else failed++;
-    }
-    addLog('תזכורת אוטומטית', `${slot === 'msg1' ? 'הודעה 1' : 'הודעה 2'}: נשלחו ${sent}, נכשלו ${failed}`);
-  } finally {
-    _waSending[slot] = false;
-  }
-}
-
-async function checkAndSendWAReminders() {
-  try {
-    const cfg = await loadWAReminderConfig();
-    const now = new Date();
-    const todayKey = now.toLocaleDateString('he-IL');
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    for (const slot of ['msg1', 'msg2']) {
-      const m = cfg[slot];
-      if (!m || !m.enabled) continue;
-      const targetMinutes = (m.hour || 0) * 60 + (m.minute || 0);
-      const isRightDay = now.getDay() === Number(m.day);
-      // חלון "תפיסה מאוחרת" מוגבל ל-30 דקות אחרי השעה שנקבעה — לא "כל היום"
-      const isWithinWindow = nowMinutes >= targetMinutes && nowMinutes <= targetMinutes + 30;
-      const alreadySentToday = m.lastSentDate === todayKey;
-      if (isRightDay && isWithinWindow && !alreadySentToday) {
-        await sendWAReminderBatch(slot, m.text || WA_REMINDER_DEFAULT_TEXT_1);
-        await saveWAReminderSlot(slot, { ...m, lastSentDate: todayKey });
-      }
-    }
-  } catch(e) { console.warn('WA reminder check failed', e); }
-}
-
-let _waSchedulerActive = false;
-function scheduleWAReminder() {
-  if (_waSchedulerActive) return; // מונע רישום כפול אם enterManager נקרא כמה פעמים
-  _waSchedulerActive = true;
-  checkAndSendWAReminders();
-  setInterval(checkAndSendWAReminders, 60000);
+  if (!res.ok) throw new Error('שמירה נכשלה (' + res.status + ')');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2424,7 +2353,7 @@ async function renderWAReminderSettings() {
   container.innerHTML = `
     <div class="card" style="margin-top:16px">
       <div class="card-title">📱 תזכורות WhatsApp אוטומטיות</div>
-      <p style="font-size:.78rem;color:var(--muted);margin-bottom:16px">שולח תזכורת לכל הנציגים שטרם הגישו אילוצים, ביום ובשעה שתבחר. אם אף אחד לא היה מחובר בשעה המדויקת — המערכת תשלח אוטומטית בכניסה הראשונה לאחר מכן באותו יום (לא תישלח פעמיים באותו יום). אפשר להשתמש ב-<code>{שם}</code> בטקסט כדי להטמיע את השם הפרטי של כל נציג.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:16px">שולח תזכורת לכל הנציגים שטרם הגישו אילוצים, ביום ובשעה שתבחר. השליחה מתבצעת משרת הבוט — גם כשאף מנהל לא מחובר למערכת, ופעם אחת בלבד באותו יום. אפשר להשתמש ב-<code>{שם}</code> בטקסט כדי להטמיע את השם הפרטי של כל נציג.</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
         ${renderWAMsgBlock('msg1', 'הודעה 1', cfg.msg1)}
         ${renderWAMsgBlock('msg2', 'הודעה 2 (תקיפה יותר)', cfg.msg2)}
@@ -2466,9 +2395,7 @@ async function saveWAReminderForm(slot) {
   if (!text) { showToast('יש להזין נוסח הודעה'); return; }
   showLoading('שומר...');
   try {
-    const cfg = await loadWAReminderConfig();
-    const existing = cfg[slot] || {};
-    await saveWAReminderSlot(slot, { ...existing, enabled, day, hour, minute, text });
+    await saveWAReminderSlot(slot, { enabled, day, hour, minute, text });
     showToast('✅ הגדרות התזכורת נשמרו');
     addLog('עדכון תזכורת WhatsApp', `${slot === 'msg1' ? 'הודעה 1' : 'הודעה 2'} עודכנה`);
   } catch(e) { showToast('שגיאה: ' + e.message); }
