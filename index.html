@@ -2629,8 +2629,11 @@ async function checkAutoReset() {
   try {
     const res = await fbFetch(FB_URL + '/lastAutoReset.json');
     const lastTs = (await res.json()) || 0;
-    const threshold = mostRecentSunday18(await getServerNow());
-    if (lastTs < threshold) {
+    const serverNow = await getServerNow();
+    const threshold = mostRecentSunday18(serverNow);
+    // האיפוס הרגיל רץ בשרת הבוט (whatsapp-bot, src/mokedReminders.js) גם כשאף
+    // מנהל לא מחובר. כאן זה רק גיבוי, אם השרת לא איפס 10 דקות אחרי 18:00.
+    if (lastTs < threshold && serverNow - threshold > 10 * 60 * 1000) {
       await fbFetch(FB_URL + '/lastAutoReset.json', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({'.sv':'timestamp'}) });
       await autoResetWeek(threshold);
     }
