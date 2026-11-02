@@ -3826,6 +3826,27 @@ function closeManualAgentPopup() {
   document.getElementById('manualAgentBody').innerHTML = '';
 }
 
+// בדיקת כפילות להוספת נציג ידני. מחזיר false אם לא להוסיף.
+// שם זהה — חוסם. שם דומה בכתיב מלא/חסר (סולומון/סולומן, כהן/כוהן) — שואל,
+// כי כך נוצרה רשומה כפולה לישראל סולומן לצד הרשומה האמיתית שלו.
+function confirmNoDuplicateAgent(fn, ln) {
+  const fullName = `${fn} ${ln}`;
+  const loose = name => (name || '').replace(/[וי'"\s]/g, '');
+  const exact = localAgents.find(a => (a.fullName || '').trim() === fullName);
+  if (exact) {
+    showToast(`נציג בשם "${fullName}" כבר קיים במערכת (${exact.allowedActivity || exact.activity || 'ללא פעילות'})!`);
+    return false;
+  }
+  const similar = localAgents.find(a => loose(a.fullName) === loose(fullName));
+  if (similar) {
+    return confirm(`כבר קיים נציג בשם דומה: "${similar.fullName}" (${similar.allowedActivity || similar.activity || 'ללא פעילות'}).
+אם זה אותו נציג — לחץ "ביטול" כדי לא ליצור רשומה כפולה.
+
+להוסיף בכל זאת את "${fullName}" כנציג חדש?`);
+  }
+  return true;
+}
+
 async function saveManualAgentFromPopup(activity) {
   const fn = document.getElementById('mpop-first')?.value.trim();
   const ln = document.getElementById('mpop-last')?.value.trim();
@@ -3856,10 +3877,7 @@ async function saveManualAgentFromPopup(activity) {
   });
 
   // בדוק כפילות לפי שם
-  if (localAgents.find(a => a.fullName === `${fn} ${ln}`)) {
-    showToast(`נציג בשם "${fn} ${ln}" כבר קיים במערכת!`);
-    return;
-  }
+  if (!confirmNoDuplicateAgent(fn, ln)) return;
   const key   = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
   const agent = {
     key, fullName:`${fn} ${ln}`, firstName:fn, lastName:ln,
@@ -3969,6 +3987,10 @@ async function saveManualAgent(activity) {
     }
   });
 
+  // בדוק כפילות לפי שם — בלי הבדיקה הזו נציג שכבר קיים נוצר מחדש בכל פעם
+  // שמוסיפים אותו ידנית (נתן דונדה נוצר 3 פעמים)
+  if (!confirmNoDuplicateAgent(fn, ln)) return;
+
   // צור מפתח ייחודי
   const key = `manual_${fn.toLowerCase()}_${ln.toLowerCase()}_${Date.now()}`;
   const agent = {
@@ -3998,6 +4020,7 @@ async function saveManualAgent(activity) {
   try {
     localAgents.push(agent);
     await saveAgent(agent);
+    addLog('הוספת נציג', `${agent.fullName} — ${activity} (ידני)`);
     document.getElementById('manualAgentForm').innerHTML = '';
     await renderMgAgents();
     updatePendingBadge();
