@@ -1839,8 +1839,13 @@ async function agentConfirmAndSubmit() {
       const tinp = document.querySelector(`#tcell-${day} input[type="time"]`);
       const ninp = document.getElementById('note-'+day);
       const existing = agentDraft[day] || agent.constraints[day] || {type:'none',time:''};
+      const newType  = sel ? sel.value : existing.type;
+      // אילוץ חדש של התחלה מאוחרת/יציאה מוקדמת — שיבוץ קודם ליום הזה כבר לא רלוונטי
+      if ((newType === 'early' || newType === 'late') && newType !== (agent.constraints[day]?.type || 'none') && agent.managerShift) {
+        agent.managerShift[day] = '';
+      }
       agent.constraints[day] = {
-        type: sel ? sel.value : existing.type,
+        type: newType,
         time: tinp ? tinp.value : existing.time,
         note: ninp ? ninp.value : (existing.note||'')
       };
@@ -2953,6 +2958,10 @@ async function sendScheduleEmailsToAll(agentList, sched) {
         assignedShifts[day] = 'דיגיטל 08:00–17:00';
       } else if (d.digital9.find(a=>a.name===agent.fullName)) {
         assignedShifts[day] = 'דיגיטל 09:00–18:00';
+      } else if (d.shift8.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = '08:00–17:00';
+      } else if (d.shift9.find(a=>a.name===agent.fullName)) {
+        assignedShifts[day] = '09:00–18:00';
       } else if (c.type === 'early') {
         assignedShifts[day] = '08:00–17:00';
       } else if (c.type === 'late') {
@@ -3030,38 +3039,45 @@ function buildSchedule(agentList) {
         if (isMauchdetDig) {
           if (c.type === 'off') dayOff.push(entry); else digital8.push(entry);
         } else {
-          if      (c.type === 'early') digital8.push(entry);
+          // משמרת שהמנהל בחר גוברת גם על התחלה מאוחרת/יציאה מוקדמת
+          if      (ms === 'd8')        digital8.push(entry);
+          else if (ms === 'd9')        digital9.push(entry);
+          else if (c.type === 'early') digital8.push(entry);
           else if (c.type === 'late')  digital9.push(entry);
-          else if (ms === 'd8')        digital8.push(entry);
           else                         digital9.push(entry);
         }
       } else if (isSingle) {
         shift8.push(entry);
       } else {
         // מובמנט שיחות — לפי managerShift (שכולל גם את הרנדומלי השמור)
-        if      (c.type === 'early') shift8.push(entry);
+        // משמרת שהמנהל בחר גוברת גם על התחלה מאוחרת/יציאה מוקדמת
+        if      (ms === '8')         shift8.push(entry);
+        else if (ms === '9')         shift9.push(entry);
+        else if (c.type === 'early') shift8.push(entry);
         else if (c.type === 'late')  shift9.push(entry);
-        else if (ms === '8')         shift8.push(entry);
         else                         shift9.push(entry);
       }
     });
 
-    const calcTakanim = (list) => list.reduce((sum, a) => {
+    // במובמנט התחלה/סיום נמדדים לפי שעות המשמרת שבה העובד שובץ בפועל
+    // (יציאה מוקדמת ב-14:00 במשמרת 09–18 = 5 שעות, לא 6)
+    const calcTakanim = (list, start, end) => list.reduce((sum, a) => {
+      const [from, to] = a.activity === 'מובמנט' ? [start, end] : [8, 18];
       if (a.constraintType === 'early' && a.time) {
         const [h, m] = a.time.split(':').map(Number);
-        return sum + Math.max(0, (h + m/60) - 8) / FULL_SHIFT;
+        return sum + Math.max(0, (h + m/60) - from) / FULL_SHIFT;
       } else if (a.constraintType === 'late' && a.time) {
         const [h, m] = a.time.split(':').map(Number);
-        return sum + Math.max(0, 18 - (h + m/60)) / FULL_SHIFT;
+        return sum + Math.max(0, to - (h + m/60)) / FULL_SHIFT;
       }
       return sum + 1;
     }, 0);
 
     const takanim = {
-      shift8:   calcTakanim(shift8),
-      shift9:   calcTakanim(shift9),
-      digital8: calcTakanim(digital8),
-      digital9: calcTakanim(digital9),
+      shift8:   calcTakanim(shift8, 8, 17),
+      shift9:   calcTakanim(shift9, 9, 18),
+      digital8: calcTakanim(digital8, 8, 17),
+      digital9: calcTakanim(digital9, 9, 18),
       total: 0
     };
     takanim.total = takanim.shift8 + takanim.shift9 + takanim.digital8 + takanim.digital9;
@@ -3707,10 +3723,10 @@ function buildScheduleText(agent, assignedShifts) {
     if (!shift) {
       if      (c.type === 'off')    shift = 'חופש';
       else if (actShift?.single)    shift = actShift.single;
-      else if (c.type === 'early')  shift = '08:00–17:00';
-      else if (c.type === 'late')   shift = '09:00–18:00';
       else if (ms === '8')          shift = '08:00–17:00';
       else if (ms === '9')          shift = '09:00–18:00';
+      else if (c.type === 'early')  shift = '08:00–17:00';
+      else if (c.type === 'late')   shift = '09:00–18:00';
       else                          shift = 'יקבע על ידי המנהל';
     }
     lines.push(`יום ${day} ${WEEK_DATES[day].label}: ${label}${timeStr} — ${shift}`);
@@ -3745,10 +3761,10 @@ function buildScheduleHTML(agent, assignedShifts) {
     if (!shift) {
       if      (c.type === 'off')    shift = 'חופש';
       else if (actShift?.single)    shift = actShift.single;
-      else if (c.type === 'early')  shift = '08:00–17:00';
-      else if (c.type === 'late')   shift = '09:00–18:00';
       else if (ms === '8')          shift = '08:00–17:00';
       else if (ms === '9')          shift = '09:00–18:00';
+      else if (c.type === 'early')  shift = '08:00–17:00';
+      else if (c.type === 'late')   shift = '09:00–18:00';
       else                          shift = 'יקבע על ידי המנהל';
     }
     const isOff   = shift === 'חופש';
@@ -4233,7 +4249,7 @@ function openScheduleEdit(safeKey) {
           font-size:.72rem;white-space:nowrap;cursor:pointer;font-family:inherit;font-weight:${curIsDigital?'700':'400'}">💻 דיגיטל</button>`;
 
       let shiftBtns = '';
-      if (val === 'none') {
+      if (val === 'none' || val === 'early' || val === 'late') {
         const shift8Btn = `<button id="mb8-${safeKey}-${day}" onclick="modalShiftToggle('${safeKey}','${day}','${s8}')"
             style="padding:3px 8px;border-radius:6px;border:1px solid ${ms===s8?'var(--green)':'var(--border)'};
             background:${ms===s8?'rgba(63,185,80,.15)':'var(--bg)'};color:${ms===s8?'var(--green)':'var(--muted)'};
@@ -4285,8 +4301,14 @@ function openScheduleEdit(safeKey) {
       </div>
     </div>`;
 
+  _modalShiftTouched = {};
   document.getElementById('editModal').style.display = 'flex';
 }
+
+// ימים שבהם המנהל לחץ 08–17 / 09–18 בחלון הפתוח. כשמשנים יום ל"התחלה
+// מאוחרת"/"יציאה מוקדמת" בלי לבחור משמרת, השיבוץ הקודם (אולי הגרלה
+// אוטומטית מיום רגיל) נמחק — ואז חלה ברירת המחדל: מוקדמת→08, מאוחרת→09
+let _modalShiftTouched = {};
 
 function modalSelChange(safeKey, day, sel) {
   sel.className = 'csel v-'+sel.value;
@@ -4329,6 +4351,7 @@ function modalShiftToggle(safeKey, day, shift) {
   if (!agent) { console.warn('agent not found:', safeKey); return; }
   if (!agent.managerShift) agent.managerShift = {};
   agent.managerShift[day] = (agent.managerShift[day] === shift) ? '' : shift;
+  _modalShiftTouched[day] = true;
   const ms  = agent.managerShift[day];
   const isDigital = agent.movementType === 'דיגיטל';
   const s8  = isDigital ? 'd8' : '8';
@@ -4361,6 +4384,10 @@ async function saveModalEdit(safeKey, andApprove) {
       }
       const ninp  = document.getElementById(`mnote-${safeKey}-${day}`);
       const existingNote = agent.constraints[day]?.note || '';
+      const prevType = agent.constraints[day]?.type || 'none';
+      if ((type === 'early' || type === 'late') && type !== prevType && !_modalShiftTouched[day] && agent.managerShift) {
+        agent.managerShift[day] = '';
+      }
       agent.constraints[day] = { type, time, note: ninp ? ninp.value.trim() : existingNote };
     });
     // managerShift is already updated live by modalShiftToggle
