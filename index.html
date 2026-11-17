@@ -1089,6 +1089,14 @@ function openEditUser(safeKey, phone) {
     </label>`;
   }).join('');
 
+  // פעילויות נוספות שבהן העובד מופיע בסידור
+  const extraChecks = ACTIVITIES.map(act => {
+    const checked = (u.extraActivities || []).includes(act) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:5px;font-size:.82rem;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" class="eu-extra-act" value="${act}" ${checked} style="accent-color:var(--accent)"/> ${act}
+    </label>`;
+  }).join('');
+
   panel.innerHTML = `
     <div class="card" style="border-color:rgba(88,166,255,.3)">
       <div class="card-title" style="color:var(--accent)">✏️ הגדרות עובד — ${u.fullName||(u.firstName||'')+' '+(u.lastName||'')||'—'}</div>
@@ -1139,6 +1147,12 @@ function openEditUser(safeKey, phone) {
         </div>
       </div>
 
+      <div style="font-size:.8rem;color:var(--accent);font-weight:700;margin-bottom:4px">🔗 מופיע גם בסידור של</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px">העובד מאושר ומשובץ במחלקה הראשית שלו, ומופיע עם אותן משמרות גם בסידור של המחלקות שמסומנות כאן</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:10px;background:var(--s2);border-radius:8px">
+        ${extraChecks}
+      </div>
+
       <div style="font-size:.8rem;color:var(--accent);font-weight:700;margin-bottom:8px">📅 ימי עבודה קבועים</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:10px;background:var(--s2);border-radius:8px">
         ${dayChecks}
@@ -1170,6 +1184,7 @@ async function saveUserEdit(safeKey, phone) {
   const pin         = document.getElementById('eu-pin')?.value.trim().replace(/[^0-9]/g,'') || '';
   const managerNotes= document.getElementById('eu-notes')?.value.trim() || '';
   const workDays    = DAYS.filter(day => document.getElementById('eu-day-'+day)?.checked);
+  const extraChecked = [...document.querySelectorAll('.eu-extra-act:checked')].map(el => el.value);
 
   if (!fn || !ln) { showToast('יש להזין שם'); return; }
 
@@ -1177,6 +1192,8 @@ async function saveUserEdit(safeKey, phone) {
     email, movementType:mvtype, jobPct, empType, managerNotes, workDays, pin,
     allowedActivity: activity || '',
     activity: activity || (localAgents.find(a=>a.key.replace(/[\s']/g,'_')===safeKey)?.activity || '') };
+  // הפעילות הראשית לא נספרת כ"נוספת"
+  updates.extraActivities = extraChecked.filter(a => a !== updates.activity);
 
   // עדכן ב-localAgents (ענן) — לעולם לא לשנות את agent.key הקיים (זה יוצר רשומה כפולה חדשה!)
   const agent = localAgents.find(a => fbKey(a.key) === safeKey);
@@ -1906,6 +1923,37 @@ function allowedActivities() {
 }
 
 // סינון נציגים לפי פעילויות מורשות
+// עובד משותף לכמה פעילויות: activity היא הפעילות הראשית — שם המנהל מאשר
+// ומשבץ אותו. extraActivities הן פעילויות נוספות שבסידור שלהן הוא מופיע
+// בשורה "משותפים", עם אותן משמרות בדיוק (המשמרת נשמרת על העובד עצמו).
+// בלי זה מנהלים יצרו לו רשומה ידנית כפולה בכל שבוע (נתן דונדה, מילנה מיכאלוב).
+function sharedAgentsFor(activity) {
+  if (!activity) return [];
+  return localAgents.filter(a => a.submitted && a.approved && a.activity !== activity
+    && (a.extraActivities || []).includes(activity));
+}
+
+function sharedShiftLabel(activity, row) {
+  const s = ACTIVITY_SHIFTS[activity] || {};
+  if (row === 'shift8')   return s.single || s.shift8 || '08:00–17:00';
+  if (row === 'shift9')   return s.shift9 || '09:00–18:00';
+  if (row === 'digital8') return 'דיגיטל ' + (activity === 'מובמנט' ? '08:00–17:00' : (s.single || '08:00–17:00'));
+  return 'דיגיטל 09:00–18:00';
+}
+
+// לכל יום: העובדים המשותפים שעובדים בו, עם המשמרת שלהם בפעילות הראשית
+function buildSharedRows(activity) {
+  const rows = {};
+  DAYS.forEach(day => rows[day] = []);
+  const guests = sharedAgentsFor(activity);
+  if (!guests.length) return rows;
+  const sched = buildSchedule(guests);
+  DAYS.forEach(day => ['shift8','shift9','digital8','digital9'].forEach(row =>
+    sched[day][row].forEach(e => rows[day].push({ name:e.name, activity:e.activity, shift:sharedShiftLabel(e.activity, row) }))
+  ));
+  return rows;
+}
+
 function filterByAllowed(agents) {
   const allowed = allowedActivities();
   return agents.filter(a => allowed.includes(a.activity));
@@ -2037,6 +2085,7 @@ async function saveWeeklySnapshot() {
       const pool = localAgents.filter(a => a.submitted && a.approved && a.activity === activity);
       if (!pool.length) return;
       const sched = buildSchedule(pool);
+      const shared = buildSharedRows(activity);
       snapshot.activities[activity] = {
         agentCount: pool.length,
         days: DAYS.map(day => ({
@@ -2047,7 +2096,8 @@ async function saveWeeklySnapshot() {
           digital8: sched[day].digital8.map(a => a.name),
           digital9: sched[day].digital9.map(a => a.name),
           dayOff:   sched[day].dayOff.map(a => a.name),
-          takanim:  sched[day].takanim?.total || 0
+          takanim:  sched[day].takanim?.total || 0,
+          shared:   shared[day].map(x => `${x.name} · ${x.shift} · ${x.activity}`)
         }))
       };
     });
@@ -2163,6 +2213,11 @@ async function renderScheduleHistory() {
         }
       }
 
+      // שורת משותפים מפעילות אחרת (רק בשבועות שנשמרו אחרי שנוספה)
+      const sharedRowHTML = days.some(d => (d.shared||[]).length)
+        ? `<tr><td class="sch-row-label" style="background:var(--s2);color:var(--muted);font-size:.72rem">🔗<br>משותפים</td>${days.map(d=>`<td class="sch-td">${pills(d.shared||[],'p8')}</td>`).join('')}</tr>`
+        : '';
+
       // שורת חופש
       const rowOff = days.map(d => `<td class="sch-td td-off">${pills(d.dayOff||[],'poff')}</td>`).join('');
 
@@ -2190,6 +2245,7 @@ async function renderScheduleHistory() {
                 <tr><td class="sch-row-label lbl-8">${label8}</td>${row8}</tr>
                 ${row9HTML}
                 ${digitalRows}
+                ${sharedRowHTML}
                 <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowOff}</tr>
                 <tr>
                   <td class="sch-row-label" style="background:var(--s2);color:var(--muted);font-size:.7rem">📊<br>תקנים</td>
@@ -3082,6 +3138,15 @@ function renderScheduleTable(sched, total, actFilter) {
     }
   }
 
+  // שורת עובדים משותפים מפעילות אחרת — לקריאה בלבד, משובצים בפעילות הראשית שלהם
+  const shared = buildSharedRows(actFilter);
+  const sharedRowHTML = DAYS.some(d => shared[d].length)
+    ? `<tr><td class="sch-row-label" style="background:var(--s2);color:var(--muted);font-size:.72rem">🔗<br>משותפים<br>מפעילות<br>אחרת</td>${DAYS.map(d => `<td class="sch-td">${
+        shared[d].length ? shared[d].map(x => { const c = actColor(x.activity);
+          return `<span class="p8" style="cursor:default;background:${c.bg};border:1px solid ${c.border};color:${c.text}" title="משובץ בסידור של ${x.activity}">${x.name}<span class="pact"> ${x.shift} · ${x.activity}</span></span>`; }).join('')
+        : '<span class="no-one">—</span>'}</td>`).join('')}</tr>`
+    : '';
+
   // שורת תקנים
   const fmtT = (n) => {
     if (n === 0) return '—';
@@ -3123,6 +3188,7 @@ function renderScheduleTable(sched, total, actFilter) {
             <tr><td class="sch-row-label lbl-8">${label8}</td>${row8}</tr>
             ${row9HTML}
             ${digitalRows}
+            ${sharedRowHTML}
             <tr><td class="sch-row-label lbl-off">🏖️<br>חופש</td>${rowO}</tr>
             <tr>
               <td class="sch-row-label" style="background:var(--s2);border-color:var(--border);color:var(--muted);font-size:.7rem">📊<br>כמות<br>תקנים</td>
