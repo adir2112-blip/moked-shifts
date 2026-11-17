@@ -1439,20 +1439,45 @@ async function doLogin() {
     const managers = await loadManagers();
     const manager = managers.find(m => m.email === email && m.password === pass);
     if (!manager) { hideLoading(); if(err) err.textContent = 'מייל או סיסמה שגויים'; return; }
-    currentUser = {
-      firstName: manager.name || email,
-      lastName:  '',
-      fullName:  manager.name || email,
-      isAdmin:   manager.isAdmin || false,
-      activities: manager.isAdmin ? ACTIVITIES : (manager.activities?.length ? manager.activities : ACTIVITIES),
-      managerEmail: email
-    };
+    currentUser = buildManagerUser(manager, email);
+    try { sessionStorage.setItem(MANAGER_SESSION_KEY, email); } catch(e) {}
     await enterManager();
   } catch(e) { if(err) err.textContent = 'שגיאה: ' + e.message; currentUser = null; }
   finally { hideLoading(); }
 }
 
+function buildManagerUser(manager, email) {
+  return {
+    firstName: manager.name || email,
+    lastName:  '',
+    fullName:  manager.name || email,
+    isAdmin:   manager.isAdmin || false,
+    activities: manager.isAdmin ? ACTIVITIES : (manager.activities?.length ? manager.activities : ACTIVITIES),
+    managerEmail: email
+  };
+}
+
+// חיבור מנהל נשמר ב-sessionStorage — שורד רענון של הטאב, אבל לא סגירה שלו,
+// כך שבמחשב משותף במוקד החיבור לא נשאר פתוח למחרת. נשמר רק המייל (לא
+// הסיסמה), ובשחזור בודקים שהמנהל עדיין קיים ברשימת המנהלים.
+const MANAGER_SESSION_KEY = 'moked_manager_session';
+
+async function restoreManagerSession() {
+  let email = null;
+  try { email = sessionStorage.getItem(MANAGER_SESSION_KEY); } catch(e) {}
+  if (!email) return false;
+  try {
+    const manager = (await loadManagers()).find(m => m.email === email);
+    if (!manager) { sessionStorage.removeItem(MANAGER_SESSION_KEY); return false; }
+    setRole('manager');
+    currentUser = buildManagerUser(manager, email);
+    await enterManager();
+    return true;
+  } catch(e) { currentUser = null; return false; }
+}
+
 function logout() {
+  try { sessionStorage.removeItem(MANAGER_SESSION_KEY); } catch(e) {}
   stopAutoRefresh();
   currentUser = null;
   _agentDeptFilter = ''; _pinAgentKey = null; _pinVal = '';
@@ -2047,7 +2072,19 @@ async function renderScheduleHistory() {
     allSnaps   = await res.json() || {};
   } catch(e) { pane.innerHTML = `<div class="empty"><p>שגיאה בטעינה</p></div>`; return; }
 
-  const snaps = Object.values(allSnaps).filter(Boolean).sort((a,b) => b.week.localeCompare(a.week));
+  // מהחדש לישן. התווית ("25.10–30.10") בלי שנה ומתחילה ביום, כך שמיון
+  // טקסט ערבב את השבועות — ממיינים לפי תאריך יום ראשון, עם השנה מ-savedAt
+  const weekSortKey = snap => {
+    const [d, m] = String(snap.week || '').split(/[–-]/)[0].split('.').map(Number);
+    const saved  = String(snap.savedAt || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (!d || !m) return 0;
+    let year = saved ? Number(saved[3]) : new Date().getFullYear();
+    const savedMonth = saved ? Number(saved[2]) : m;
+    if (m - savedMonth > 6) year--;      // שבוע של דצמבר שנשמר בינואר
+    if (savedMonth - m > 6) year++;      // שבוע של ינואר שנשמר בדצמבר
+    return year * 10000 + m * 100 + d;
+  };
+  const snaps = Object.values(allSnaps).filter(Boolean).sort((a,b) => weekSortKey(b) - weekSortKey(a));
 
   if (!snaps.length) {
     pane.innerHTML = `
@@ -4493,6 +4530,7 @@ function shuffleArray(arr) {
   try { await loadCustomActivities(); } catch(e) {}
   buildDeptButtons();
   setRole('agent');
+  await restoreManagerSession();
 })();
 </script>
 <div id="undoBar" style="display:none;position:fixed;bottom:20px;right:50%;transform:translateX(50%);background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px 20px;z-index:99999;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.25)">
